@@ -6,11 +6,10 @@ Der Bot kann derzeit nur über ein Python-Skript gesteuert werden. Ein GUI ist i
 
 Features:
 - Login ohne zusätzliche Verwendung eines Browsers
-- vollautomatische Bewässerung aller Gärten
+- vollautomatische Bewässerung aller Gärten inkl. Wassergarten
 
 Geplante Features:
-- GUI 
-- Erweiterung der Bewässerung des Wassergarten
+- GUI
 - automatisiertes Anpflanzen inkl. Wassergarten
 - Abfrage aller aktuellen Marktpreise (Keine Abhängigkeit von Preislistenpflegern und deren Aktualisierungsintervall!)
 - Bewertung der aktuellen Marktpreise hinsichtlich NPC-Preise
