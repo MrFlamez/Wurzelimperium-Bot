@@ -8,12 +8,12 @@ from collections import namedtuple
 
 Login = namedtuple('Login', ['server', 'user', 'password'])
 
-
 class Spieler():
     
     """
     Diese Klasse enthält alle wichtigen Informationen über den Spieler-Charakter
     """
+    
     accountLogin = None
     userName = None
     userID = None

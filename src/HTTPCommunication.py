@@ -6,14 +6,11 @@ Created on 21.03.2017
 @author: MrFlamez
 '''
 
-import httplib2
 from urllib import urlencode
-import json
-import re
+import json, re, httplib2
 from Cookie import SimpleCookie
 from src.Session import Session
-import yaml
-import time
+import yaml, time, logging
 
 
 #Defines
@@ -29,14 +26,13 @@ class HTTPConnection(object):
     Anfragen und Antworten verarbeitet.
     """
     
-    __Session = Session()
-    __webclient = httplib2.Http()
-    __userAgent = None
-    __JWToken = None
-    
     def __init__(self):
+        self.__webclient = httplib2.Http()
         self.__webclient.follow_redirects = False
         self.__userAgent = 'Opera/9.80 (Windows NT 6.1; Win64; x64) Presto/2.12.388 Version/12.17'
+        self.__logHTTPConn = logging.getLogger('bot.HTTPConn')
+        self.__Session = Session()
+        self.__JWToken = None
 
     def __generateUserDataFromJSONContent(self, content):
         userData = {}

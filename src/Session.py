@@ -6,7 +6,7 @@ Created on 21.01.2017
 @author: MrFlamez
 '''
 
-import time
+import time, logging
 
 
 class Session(object):
@@ -24,6 +24,7 @@ class Session(object):
     
     def __init__(self):
 
+        self.__logSession = logging.getLogger('bot.Session')
         self.__sessionID = None
         self.__server = None
         self.__userID = None

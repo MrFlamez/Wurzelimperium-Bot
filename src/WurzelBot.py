@@ -14,28 +14,28 @@ import logging
 class WurzelBot(object):
     """
     Die Klasse WurzelBot übernimmt jegliche Koordination aller anstehenden Aufgaben.
-    
     """
     
-    __HTTPConn = HTTPConnection()
-    __Spieler = Spieler()
-    #TODO: __logging?
     __Parser = None #TODO: Parser als dict anlegen?
 
 
     def __init__(self):
-        logging.basicConfig(filename='wurzelbot.log', level=logging.INFO)
+        self.__logBot = logging.getLogger("bot")
+        self.__HTTPConn = HTTPConnection()
+        self.__Spieler = Spieler()
+        
 
-
-    def start(self, server, user, pw):
+    def launchBot(self, server, user, pw):
         """
-        Diese Funktion startet den Wurzelbot durch folgenden Aktionen
-        - setzt den AccountLogin in der Spieler-Klasse
-        - öffnet eine Session
+        Diese Funktion startet und initialisiert den Wurzelbot
         """
-        logging.info('Starte Wurzelbot')
+        #Login
+        self.__logBot.info('Starte Wurzelbot')
         loginDaten = Login(server=server, user=user, password=pw)
-        userID = self.__HTTPConn.logIn(loginDaten)
+        try:
+            userID = self.__HTTPConn.logIn(loginDaten)
+        except:
+            pass
         userName = self.__HTTPConn.getUserName()
         #TODO: Zuweisung der wunr sieht sehr ungünstig aus, elegantere Lösung?
         if (userID != 0):
@@ -43,13 +43,14 @@ class WurzelBot(object):
             self.__Spieler.userName = userName
             self.__Spieler.userID = userID
         else:
-            print 'Fehler beim Starten des Bots'
+            self.__logBot.error('Fehler beim Starten des Bots')
+            
 
         self.__Spieler.GartenAnzahl = self.__HTTPConn.getNumberOfGardens()
 
 
-    def stop(self):
-        #TODO: Name der Methode ändern
+    def exitBot(self):
+        
         self.__HTTPConn.logOut()
         logging.info('Beende Wurzelbot')
 
