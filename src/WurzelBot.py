@@ -62,7 +62,7 @@ class WurzelBot(object):
         try:
             userData = self.__HTTPConn.readUserDataFromServer()
         except:
-            print 'UserDaten konnten nicht aktualisiert werden'
+            self.__logBot.error('UserDaten konnten nicht aktualisiert werden')
         else:
             self.__Spieler.userData = userData
 
