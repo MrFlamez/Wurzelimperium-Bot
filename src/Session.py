@@ -11,61 +11,91 @@ import time, logging
 
 class Session(object):
     """
-    Die Session Klasse stellt die Kommunikation des Wurzelbots mit dem Spiel sicher und
-    koordiniert alle HTTP-Anfragen inkl. der Informationgewinnung aus den Antworten.
-    Sie ist das Pendant einer PHPSession auf Python-Ebene und dieser daher nachempfunden.
-    
-    Die Session weiß selbst für welchen Server/Spieler sie exklusiv geöffnet wurde.
+    Die Session Klasse ist das Python-Pendant einer PHP-Session und dieser daher nachempfunden.
     """
 
-    __lifetime = 7200 #Gültigkeit der Session (2 h -> 7200 s)
-    #TODO: evtl. 2 min. weniger __lifetime um Aktionen ungestört durchführen zu können
-    
+    #Gültigkeitsdauer der Session (2 h -> 7200 s)
+    __lifetime         = 7200
+    __lifetime_reserve =  300
+
+    #Eine Reservezeit dient dazu, kurz vor Ende der Session rechtzeitig alle Aktionen
+    #abschließen zu können
     
     def __init__(self):
-
+        """
+        Initialisierung aller Attribute mit einem Standardwert.
+        """
         self.__logSession = logging.getLogger('bot.Session')
         self.__sessionID = None
         self.__server = None
         self.__userID = None
         self.__startTime = None
-        self.__endTime = None  
-        
+        self.__endTime = None
+ 
+
+    def isSessionTimeElapsed(self):
+        """
+        Prüft, ob die offene Session abgelaufen ist.
+        """
+        currentTime = time.time()
+        if (currentTime > self.__endTime):
+            return True
+        else:
+            return False
+
+
+    def isSessionValid(self):
+        """
+        Prüft anhand verschiedener Kriterien, ob die aktuelle Session gültig ist.
+        """
+        bReturn = True
+        if (self.__sessionID == None): bReturn = False
+        if (self.isSessionTimeElapsed()): bReturn = False
+        return bReturn
+
+
     def openSession(self, sessionID, server, userID):
         """
-        Die Methode createSession() soll einen Login durchführen und anschließend initial die
-        Spielderdaten setzen.
+        Anlegen einer neuen Session mit allen notwendigen Daten.
         """
-
         self.__sessionID = sessionID
         self.__server = server
         self.__userID = userID
         
         self.__startTime = time.time()
-        self.__endTime = self.__startTime + self.__lifetime
-    
-    
+        self.__endTime = self.__startTime + (self.__lifetime - self.__lifetime_reserve)
+        
+        sID = str(self.__sessionID)
+        self.__logSession.info("Session (ID: " + sID + ") geöffnet")
+
+
     def closeSession(self, wunr, server):
         """
-        Die Methode closeSession() schließt die Session...
+        Zurücksetzen aller Informationen. Gleichbedeutend mit einem Schließen der Session.
         """
-        pass
+        sID = str(self.__sessionID)
+        self.__sessionID = None
+        self.__server = None
+        self.__userID = None
+        self.__startTime = None
+        self.__endTime = None
+        self.__logSession.info("Session (ID: " + sID + ") geschlossen")
 
     
     def getRemainingTime(self):
         """
-        Die Methdoe gibt die verbleibende Zeit zurück, bis die Session ungültig wird.
+        Gibt die verbleibende Zeit zurück, bis die Session abläuft.
         """
-        return self.__endTime - time.time()
-    
+        currentTime = time.time()
+        return self.__endTime - currentTime
+
+
     def getSessionID(self):
+        """
+        Gibt die Session-ID zurück.
+        """
         return self.__sessionID
-    
-    def getUserID(self):
-        return self.__userID
-    
-    def getServer(self):
-        return self.__server
+
 
 
         
