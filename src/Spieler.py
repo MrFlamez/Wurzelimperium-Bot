@@ -11,7 +11,7 @@ Login = namedtuple('Login', ['server', 'user', 'password'])
 class Spieler():
     
     """
-    Diese Klasse enthält alle wichtigen Informationen über den Spieler-Charakter
+    Diese Daten-Klasse enthält alle wichtigen Informationen über den Spieler.
     """
     
     accountLogin = None

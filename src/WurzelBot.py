@@ -16,10 +16,13 @@ class WurzelBot(object):
     Die Klasse WurzelBot übernimmt jegliche Koordination aller anstehenden Aufgaben.
     """
     
-    __Parser = None #TODO: Parser als dict anlegen?
+    #__Parser = None
 
 
     def __init__(self):
+        """
+        
+        """
         self.__logBot = logging.getLogger("bot")
         self.__HTTPConn = HTTPConnection()
         self.__Spieler = Spieler()
@@ -27,37 +30,52 @@ class WurzelBot(object):
 
     def launchBot(self, server, user, pw):
         """
-        Diese Funktion startet und initialisiert den Wurzelbot
+        Diese Methode startet und initialisiert den Wurzelbot. Dazu wird ein Login mit den
+        übergebenen Logindaten durchgeführt und alles nötige initialisiert.
         """
-        #Login
         self.__logBot.info('Starte Wurzelbot')
         loginDaten = Login(server=server, user=user, password=pw)
         try:
-            userID = self.__HTTPConn.logIn(loginDaten)
+            self.__HTTPConn.logIn(loginDaten)
         except:
-            pass
-        userName = self.__HTTPConn.getUserName()
-        #TODO: Zuweisung der wunr sieht sehr ungünstig aus, elegantere Lösung?
-        if (userID != 0):
-            self.__Spieler.accountLogin = loginDaten
-            self.__Spieler.userName = userName
-            self.__Spieler.userID = userID
+            self.__logBot.error('Problem beim Starten des Wurzelbots.')
+            return
+        
+        try:
+            userName = self.__HTTPConn.getUserName()
+        except:
+            self.__logBot.error('Username konnte nicht ermittelt werden.')
         else:
-            self.__logBot.error('Fehler beim Starten des Bots')
-            
+            self.__Spieler.userName = userName
 
-        self.__Spieler.GartenAnzahl = self.__HTTPConn.getNumberOfGardens()
+        try:
+            nGarden = self.__HTTPConn.getNumberOfGardens()
+        except:
+            self.__logBot.error('Anzahl der Gärten konnte nicht ermittelt werden.')
+        else:
+            self.__Spieler.GartenAnzahl = nGarden
+            
+        self.__Spieler.accountLogin = loginDaten
+        self.__Spieler.userID = self.__HTTPConn.getUserID()
 
 
     def exitBot(self):
-        
-        self.__HTTPConn.logOut()
-        logging.info('Beende Wurzelbot')
+        """
+        Diese Methode beendet den Wurzelbot geordnet und setzt alles zurück.
+        """
+        self.__logBot.info('Beende Wurzelbot')
+        try:
+            self.__HTTPConn.logOut()
+        except:
+            self.__logBot.error('Wurzelbot konnte nicht korrekt beendet werden.')
+        else:
+            self.__logBot.info('Logout erfolgreich.')
 
 
     def updateUserData(self):
         """
         Ermittelt die Userdaten und setzt sie in der Spielerklasse.
+        Status: kA
         """
         try:
             userData = self.__HTTPConn.readUserDataFromServer()
@@ -70,6 +88,7 @@ class WurzelBot(object):
     def waterPlantsInGarden(self, gardenID):
         """
         Ein Garten mit der gardenID wird komplett bewässert.
+        Status: kA
         """
         # Zurückgegebene Felderindizes für Pflanzen der Größe 1-, 2- und 4-Felder
         # Wichtig beim Gießen; dort müssen alle Indizes angegeben werden.
@@ -86,6 +105,7 @@ class WurzelBot(object):
     def waterPlantsInWatergarden(self):
         """
         Alle Pflanzen im Wassergarten werden bewässert.
+        Status: kA
         """
         try:
             plants = self.__HTTPConn.waterGarden()
@@ -99,6 +119,7 @@ class WurzelBot(object):
     def waterPlantsInAllGardens(self):
         """
         Alle Gärten des Spielers werden komplett bewässert.
+        Status: kA
         """
         for gardenID in range(1, self.__Spieler.GartenAnzahl + 1):
             self.waterPlantsInGarden(gardenID)
