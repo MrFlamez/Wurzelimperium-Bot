@@ -43,7 +43,7 @@ class Session(object):
             return False
 
 
-    def isSessionValid(self):
+    def isSessionValid(self): #TODO: Prüfen wie die Methode sinnvoll eingesetzt werden kann
         """
         Prüft anhand verschiedener Kriterien, ob die aktuelle Session gültig ist.
         """

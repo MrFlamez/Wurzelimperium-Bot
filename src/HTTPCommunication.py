@@ -24,25 +24,27 @@ class HTTPConnection(object):
     """
     Mit der Klasse HTTPConnection werden alle anfallenden HTTP-Verbindungen verarbeitet.
     """
-    
+
     def __init__(self):
         self.__webclient = httplib2.Http()
         self.__webclient.follow_redirects = False
         self.__userAgent = 'Opera/9.80 (Windows NT 6.1; Win64; x64) Presto/2.12.388 Version/12.17'
         self.__logHTTPConn = logging.getLogger('bot.HTTPConn')
+        self.__logHTTPConn.setLevel(logging.DEBUG)
         self.__Session = Session()
         self.__token = None
         self.__userID = None
-        
+
+
     def __del__(self):
         self.__Session = None
         self.__token = None
         self.__userID = None
-        
 
-    def __generateUserDataFromJSONContent(self, content):
+
+    def __getUserDataFromJSONContent(self, content):
         """
-        Status: kA
+        Ermittelt userdaten aus JSON Content.
         """
         userData = {}
         userData['bar'] = str(content['bar'])
@@ -55,7 +57,8 @@ class HTTPConnection(object):
         userData['g_tag'] = str(content['g_tag'])
         userData['time'] = int(content['time'])
         return userData
-    
+
+
     def __checkIfHTTPStateIsOK(self, response):
         """
         Prüft, ob der Status der HTTP Anfrage OK ist.
@@ -63,6 +66,7 @@ class HTTPConnection(object):
         if not (response['status'] == str(HTTP_STATE_OK)):
             self.__logHTTPConn.debug('HTTP State: ' + str(response['status']))
             raise HTTPStateError('HTTP Status ist nicht OK')
+
 
     def __checkIfHTTPStateIsFOUND(self, response):
         """
@@ -72,45 +76,51 @@ class HTTPConnection(object):
             self.__logHTTPConn.debug('HTTP State: ' + str(response['status']))
             raise HTTPStateError('HTTP Status ist nicht FOUND')
 
+
     def __generateJSONContentAndCheckForSuccess(self, content):
         """
-        Status: kA
+        Aufbereitung und Prüfung der vom Server empfangenen JSON Daten.
         """
         jContent = json.loads(content)
         if (jContent['success'] == 1): return jContent
         else: raise JSONError()
 
+
     def __generateJSONContentAndCheckForOK(self, content):
         """
-        Aufbereitung und Prüfung der vom Server empfangenen Daten.
+        Aufbereitung und Prüfung der vom Server empfangenen JSON Daten.
         """
         jContent = json.loads(content)
         if (jContent['status'] == 'ok'): return jContent
         else: raise JSONError()
 
+
     def __isFieldWatered(self, jContent, fieldID):
         """
-        Status: kA
+        Ermittelt, ob ein Feld fieldID gegossen ist und gibt True/False zurück.
+        Ist das Datum der Bewässerung 0, wurde das Feld noch nie gegossen.
+        Eine Bewässerung hält 24 Stunden an. Liegt die Zeit der letzten Bewässerung
+        also 24 Stunden + 30 Sekunden (Sicherheit) zurück, wurde das Feld zwar bereits gegossen,
+        kann jedoch wieder gegossen werden.
         """
-
-        oneDayInSeconds = (24*60*60) + 30 #30 s Sicherheit zur Serverzeit
+        oneDayInSeconds = (24*60*60) + 30
         currentTimeInSeconds = time.time()
         waterDateInSeconds = int(jContent['water'][fieldID-1][1])
 
-        if waterDateInSeconds == '0': return False #Wurde noch nie gegossen
+        if waterDateInSeconds == '0': return False
         elif (currentTimeInSeconds - waterDateInSeconds) > oneDayInSeconds: return False
         else: return True
 
 
     def __getAllFieldIDsFromFieldIDAndSizeAsString(self, fieldID, plantSize):
         """
-        Status: kA
+        Rechnet anhand der fieldID und plantSize alle IDs aus und gibt diese zurück.
         """
         if (plantSize == '1x1'): return str(fieldID)
         if (plantSize == '2x1'): return str(fieldID) + ',' + str(fieldID + 1)
         if (plantSize == '1x2'): return str(fieldID) + ',' + str(fieldID + 17)
         if (plantSize == '2x2'): return str(fieldID) + ',' + str(fieldID + 1) + ',' + str(fieldID + 17) + ',' + str(fieldID + 18)
-        print 'Error der plantSize --> ' + plantSize
+        self.__logHTTPConn.debug('Error der plantSize --> ' + plantSize)
 
 
     def __getTokenFromURL(self, url):
@@ -182,7 +192,8 @@ class HTTPConnection(object):
         else:
             self.__logHTTPConn.debug(jContent['table'])
             raise JSONError('Anzahl der Gärten nicht gefunden.')
-        
+
+
     def __checkIfSessionIsDeleted(self, cookie):
         """
         Prüft, ob die Session gelöscht wurde.
@@ -192,11 +203,42 @@ class HTTPConnection(object):
             raise HTTPRequestError('Session wurde nicht gelöscht')
 
 
+    def __findPlantsToBeWateredFromJSONContent(self, jContent):
+        """
+        Sucht im JSON Content nach Pflanzen die bewässert werden können und gibt diese inkl. der Pflanzengröße zurück.
+        """
+        plantsToBeWatered = {'fieldID':[], 'size':[]}
+        for field in range(0, len(jContent['grow'])):
+            plantedFieldID = jContent['grow'][field][0]
+            plantSize = jContent['garden'][str(plantedFieldID)][9]
+            #neededFields = self.getNumberOfFieldsFromSizeOfPlant(plantSize)
+            
+            if not self.__isFieldWatered(jContent, plantedFieldID):
+                fieldIDToBeWatered = plantedFieldID
+                plantsToBeWatered['fieldID'].append(fieldIDToBeWatered)
+                plantsToBeWatered['size'].append(plantSize)
+
+        return plantsToBeWatered
+
+
+    def __generateYAMLContentAndCheckForSuccess(self, content):
+        """
+        Aufbereitung und Prüfung der vom Server empfangenen YAML Daten.
+        """
+        content = content.replace('\n', ' ')
+        content = content.replace('\t', ' ')
+        yContent = yaml.load(content)
+        
+        if (yContent['success'] == 1): return yContent
+        else:
+            self.__logHTTPConn.debug(yContent)
+            raise YAMLError()
+
+
     def logIn(self, loginDaten):
         """
         Führt einen login durch und öffnet eine Session.
         """
-
         parameter = urlencode({'do': 'login',
                             'server': 'server' + str(loginDaten.server),
                             'user': loginDaten.user,
@@ -223,7 +265,7 @@ class HTTPConnection(object):
             self.__Session.openSession(cookie['PHPSESSID'].value, str(loginDaten.server))
             self.__userID = cookie['wunr'].value
 
-            
+
     def getUserID(self):
         """
         Gibt die wunr als userID zurück die beim Login über das Cookie erhalten wurde.
@@ -250,12 +292,11 @@ class HTTPConnection(object):
         else:
             self.__del__()
 
-        
+
     def getNumberOfGardens(self):
         """
         Ermittelt die Anzahl der Gärten und gibt diese als int zurück.
         """
-
         headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
                              'wunr=' + self.__userID,
                    'Connection': 'Keep-Alive'}
@@ -277,7 +318,6 @@ class HTTPConnection(object):
         """
         Ermittelt den Usernamen auf Basis der userID und gibt diesen als str zurück.
         """
-    
         headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
                              'wunr=' + self.__userID,
                    'Connection': 'Keep-Alive'}
@@ -294,12 +334,11 @@ class HTTPConnection(object):
         else:
             return userName
 
-    
+
     def readUserDataFromServer(self):
         """
-        Status: kA
+        Ruft eine Updatefunktion im Spiel auf und verarbeitet die empfangenen userdaten.
         """
-        
         headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
                              'wunr=' + self.__userID,
                    'Connection': 'Keep-Alive'}
@@ -308,53 +347,38 @@ class HTTPConnection(object):
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
             self.__checkIfHTTPStateIsOK(response)
-            jContent = self.__generateJSONContentAndCheckSuccess(content)
+            jContent = self.__generateJSONContentAndCheckForSuccess(content)
         except:
-            raise HTTPRequestError('Fehler im HTTP Request der Funktion getUserData()')
+            raise
         else:
-            return self.__generateUserDataFromJSONContent(jContent)
+            return self.__getUserDataFromJSONContent(jContent)
 
 
-    def getFieldIDsAndPlantsizeToWater(self, iGarten):
+    def getFieldIDsAndPlantsizeToWater(self, gardenID):
         """
-        Ermittelt alle bepflanzten Felder, die im Garten mit der Nummer iGarten wachsen und gibt diese zurück.
-        Status: kA
+        Ermittelt alle bepflanzten Felder, die im Garten mit der Nummer gardenID wachsen und gibt diese zurück.
         """
-
         headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
                              'wunr=' + self.__userID,
                    'Connection': 'Keep-Alive'}
-        adresse = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/ajax/ajax.php?do=changeGarden&garden='+str(iGarten)+'&token='+self.__token
+        adresse = 'http://s' + str(self.__Session.getServer()) + \
+                  '.wurzelimperium.de/ajax/ajax.php?do=changeGarden&garden=' + \
+                  str(gardenID) + '&token=' + self.__token
 
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
             self.__checkIfHTTPStateIsOK(response)
             jContent = self.__generateJSONContentAndCheckForOK(content)
-            print jContent
         except:
-            raise HTTPRequestError('Fehler im HTTP Request der Funktion getFieldsToWater()')
+            raise
         else:
-            plantsToBeWatered = {'fieldID':[], 'size':[]}
-            for field in range(0, len(jContent['grow'])):
-                
-                plantedFieldID = jContent['grow'][field][0]
-                plantSize = jContent['garden'][str(plantedFieldID)][9]
-                #neededFields = self.getNumberOfFieldsFromSizeOfPlant(plantSize)
-                
-                if not self.__isFieldWatered(jContent, plantedFieldID):
-                    fieldIDToBeWatered = jContent['water'][plantedFieldID-1][0]
-                    plantsToBeWatered['fieldID'].append(fieldIDToBeWatered)
-                    plantsToBeWatered['size'].append(plantSize)
-
-            return plantsToBeWatered
+            return self.__findPlantsToBeWateredFromJSONContent(jContent)
 
 
     def waterField(self, iGarten, iField, sSize):
-        
         """
-        Status: kA
+        Bewässert die Pflanze iField mit der Größe sSize im Garten iGarten.
         """
-
         sFieldsToWater = self.__getAllFieldIDsFromFieldIDAndSizeAsString(iField, sSize)
         
         headers = {'User-Agent': self.__userAgent,\
@@ -362,25 +386,18 @@ class HTTPConnection(object):
                              'wunr=' + self.__userID,\
                    'X-Requested-With': 'XMLHttpRequest',\
                    'Connection': 'Keep-Alive'}
-        adresse = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/save/wasser.php?feld[]='+str(iField)+'&felder[]='+sFieldsToWater+'&cid='+self.__token+'&garden='+str(iGarten)
+        adresse = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/save/wasser.php?feld[]=' + \
+                  str(iField) + '&felder[]=' + sFieldsToWater + '&cid=' + self.__token + '&garden=' + str(iGarten)
 
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
             self.__checkIfHTTPStateIsOK(response)
+            yContent = self.__generateYAMLContentAndCheckForSuccess(content)
         except:
-            raise HTTPRequestError('Fehler im HTTP Request der Funktion waterField()')
-        else:
-            content = content.replace('\n', ' ')
-            content = content.replace('\t', ' ')
-            yContent = yaml.load(content)
-            if (yContent['success'] == 1):
-                print yContent['felder']
-                print '\n'
-            else:
-                print 'Fehler beim Giessen ' + str(yContent)
-                return -1
+            raise
 
-    def waterGarden(self): #Wassergarten
+
+    def waterGarden(self): #TODO: Maintenance
         """
         Status: kA
         """
@@ -412,7 +429,7 @@ class HTTPConnection(object):
 
             return plantsToBeWatered
 
-    def waterWatergardenField(self, iField, sSize):
+    def waterWatergardenField(self, iField, sSize): #TODO: Maintenance
         
         """
         Status: kA
@@ -481,6 +498,12 @@ class JSONError(Exception):
         return repr(self.value)
     
 class HTTPRequestError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
+class YAMLError(Exception):
     def __init__(self, value):
         self.value = value
     def __str__(self):

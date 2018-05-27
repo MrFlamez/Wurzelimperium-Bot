@@ -24,6 +24,7 @@ class WurzelBot(object):
         
         """
         self.__logBot = logging.getLogger("bot")
+        self.__logBot.setLevel(logging.DEBUG)
         self.__HTTPConn = HTTPConnection()
         self.__Spieler = Spieler()
         
@@ -75,7 +76,6 @@ class WurzelBot(object):
     def updateUserData(self):
         """
         Ermittelt die Userdaten und setzt sie in der Spielerklasse.
-        Status: kA
         """
         try:
             userData = self.__HTTPConn.readUserDataFromServer()
@@ -88,25 +88,36 @@ class WurzelBot(object):
     def waterPlantsInGarden(self, gardenID):
         """
         Ein Garten mit der gardenID wird komplett bewässert.
-        Status: kA
         """
-        # Zurückgegebene Felderindizes für Pflanzen der Größe 1-, 2- und 4-Felder
+        # Zurückgegebene Felderindizes (x) für Pflanzen der Größe 1-, 2- und 4-Felder.
         # Wichtig beim Gießen; dort müssen alle Indizes angegeben werden.
         # (Sowohl die mit x als auch die mit o gekennzeichneten).
+        # x: fieldID
+        # o: ergänzte Felder anhand der size
         # +---+   +---+---+   +---+---+
         # | x |   | x | o |   | x | o |
         # +---+   +---+---+   +---+---+
         #                     | o | o |
         #                     +---+---+
-        plants = self.__HTTPConn.getFieldIDsAndPlantsizeToWater(gardenID)
-        for i in range(0, len(plants['fieldID'])):
-            self.__HTTPConn.waterField(gardenID, plants['fieldID'][i], plants['size'][i])
-            
+        self.__logBot.info('Gieße alle Pflanzen im Garten ' + str(gardenID) + '.')
+        try:
+            plants = self.__HTTPConn.getFieldIDsAndPlantsizeToWater(gardenID)
+            nPlants = len(plants['fieldID'])
+            for i in range(0, nPlants):
+                self.__HTTPConn.waterField(gardenID, plants['fieldID'][i], plants['size'][i])
+                print (str(i+1) + ' von ' + str(nPlants)) #TODO: Kann später entfernt werden
+        except:
+            self.__logBot.error('Garten ' + str(gardenID) + ' konnte nicht bewässert werden.')
+        else:
+            self.__logBot.info('Im Garten ' + str(gardenID) + ' wurden ' + str(nPlants) + ' Pflanzen gegossen.')
+
+
     def waterPlantsInWatergarden(self):
         """
         Alle Pflanzen im Wassergarten werden bewässert.
         Status: kA
         """
+        #TODO: Maintenance
         try:
             plants = self.__HTTPConn.waterGarden()
         except:
@@ -119,12 +130,13 @@ class WurzelBot(object):
     def waterPlantsInAllGardens(self):
         """
         Alle Gärten des Spielers werden komplett bewässert.
-        Status: kA
         """
         for gardenID in range(1, self.__Spieler.GartenAnzahl + 1):
             self.waterPlantsInGarden(gardenID)
+        #TODO: Wassergarten ergänzen
 
 
     def test(self):
         #TODO: Für Testzwecke, kann später entfernt werden.       
         pass
+
