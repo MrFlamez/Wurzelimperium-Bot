@@ -128,11 +128,10 @@ class HTTPConnection(object):
         Ermittelt aus einer übergebenen URL den security token.
         """
         #token extrahieren
-        split = re.search(r'(http://.*/logw.php).*token=([a-f0-9]{32})', url)
-        
+        split = re.search(r'http://.*/logw.php.*token=([a-f0-9]{32})', url)
         iErr = 0
         if split:
-            tmpToken = split.group(2)
+            tmpToken = split.group(1)
             if (tmpToken == ''):
                 iErr = 1
         else:
@@ -411,6 +410,8 @@ class HTTPConnection(object):
         
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+            print response
+            print content
             self.__checkIfHTTPStateIsOK(response)
             jContent = self.__generateJSONContentAndCheckForOK(content)
         except:
@@ -464,8 +465,83 @@ class HTTPConnection(object):
                 return -1
 
 
-    """
 
+    def sendMessage(self, msg_to, msg_subject, msg_body):
+        """
+        #E-Mail Adresse muss bestätigt sein!
+        #TODO: Beim Erstellen prüfen, ob Mail bestätigt ist.
+        
+        #Neue Nachricht erstellen
+        headers = {'User-Agent': self.__userAgent,\
+                   'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,\
+                   'Content-type': 'application/x-www-form-urlencoded'}
+        
+        response, content = self.__webclient.request('http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/nachrichten/new.php',
+                                                     'GET',
+                                                     headers = headers)
+        
+        #print response['status']
+        
+        self.__HTMLParser.__init__(2)
+        self.__HTMLParser.setAttrs('name', 'hpc')
+        hpc = self.__HTMLParser.startParser(content)
+
+
+        #Nachricht absenden
+        parameter = urlencode({'hpc': hpc,
+                               'msg_to': msg_to,
+                               'msg_subject': msg_subject,
+                               'msg_body': msg_body,
+                               'msg_send': 'senden'}) 
+                            
+        response2, content = self.__webclient.request('http://s' + str(self.__server) + '.wurzelimperium.de/nachrichten/new.php',
+                                                     'POST', parameter, headers)
+        
+        print content
+        """
+        pass
+    """
+    def getUsrList(self, iStart, iEnd):
+        
+        userList = {'Nr':[], 'Gilde':[], 'Name':[], 'Punkte':[]}
+        #iStart darf nicht 0 sein, da sonst beim korrigierten Index -1 übergeben wird
+        if (iStart == 0):
+            iStart = 1
+        
+        if (iStart == iEnd or iStart > iEnd):
+            return False
+                
+        iStartCorr = iStart - 1
+        iCalls = int(math.ceil(float(iEnd-iStart)/100))
+        
+        headers = {'Cookie': 'PHPSESSID=' + self.__PHPSESSID + '; wunr=' + self.__wunr}
+        
+        for i in range(iCalls):
+            print i
+            response, content = self.__webclient.request('http://s' + str(self.__server) + '.wurzelimperium.de/ajax/ajax.php?do=statsGetStats&which=1&start='+str(iStartCorr)+'&showMe=0&additional=0&token=' + self.__token,
+                                                         'GET',
+                                                         headers = headers)
+            
+            j = json.loads(content)
+            if (j['status'] == 'ok'):
+                
+                self.__HTMLParser.__init__(3)
+                if (i == 0):
+                    userList = self.__HTMLParser.startParser(str(j['table']))
+                else:
+                    tmp = self.__HTMLParser.startParser(str(j['table']))
+                    userList['Nr'] = userList['Nr'] + tmp['Nr']
+                    userList['Gilde'] = userList['Gilde'] + tmp['Gilde']
+                    userList['Name'] = userList['Name'] + tmp['Name']
+                    userList['Punkte'] = userList['Punkte'] + tmp['Punkte']
+            else:
+                return False
+            
+            iStartCorr = iStartCorr + 100
+        
+        return userList
+        
     def changeGarden(self, iGarten):
 
         headers = {'User-Agent': self.__userAgent,\
@@ -482,6 +558,31 @@ class HTTPConnection(object):
         else:
             pass
     """
+
+    def isBeekeepingAvailable(self):
+        """
+        Funktion ermittelt, ob die Imkerei (Beekeeping) verfügbar ist und gibt True/False zurück.
+        """
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                   'Connection': 'Keep-Alive'}
+        adresse = 'http://s' + str(self.__Session.getServer()) + \
+                  '.wurzelimperium.de/ajax/gettrophies.php?category=giver'
+
+        try:
+            response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+            self.__checkIfHTTPStateIsOK(response)
+            jContent = self.__generateJSONContentAndCheckForOK(content)
+        except:
+            raise
+        else:
+            if '316' in jContent['gifts']:
+                if (jContent['gifts']['316']['name'] == 'Bienen-Fan'):
+                    return True
+                else:
+                    return False
+            else:
+                return False
 
     #TODO: Was passiert wenn ein Garten hinzukommt (parallele Sitzungen im Browser und Bot)? Globale Aktualisierungsfunktion?
     

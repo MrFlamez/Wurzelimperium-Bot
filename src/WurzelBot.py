@@ -55,7 +55,15 @@ class WurzelBot(object):
             self.__logBot.error('Anzahl der Gärten konnte nicht ermittelt werden.')
         else:
             self.__Spieler.GartenAnzahl = nGarden
-            
+        
+        try:
+            bBee = self.__HTTPConn.isBeekeepingAvailable()
+        except:
+            self.__logBot.error('Verfügbarkeit der Imkerei konnte nicht ermittelt werden.')
+        else:
+            self.__Spieler.imkerei = bBee
+        
+        
         self.__Spieler.accountLogin = loginDaten
         self.__Spieler.userID = self.__HTTPConn.getUserID()
 
@@ -137,6 +145,7 @@ class WurzelBot(object):
 
 
     def test(self):
-        #TODO: Für Testzwecke, kann später entfernt werden.       
-        pass
+        #TODO: Für Testzwecke, kann später entfernt werden.
+        self.__HTTPConn.isTest()
+
 

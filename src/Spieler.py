@@ -19,6 +19,7 @@ class Spieler():
     userID = None
     GartenAnzahl = None
     userData = None
+    imkerei = None
 
     def __init__(self):
         pass
