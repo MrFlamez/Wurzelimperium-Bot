@@ -559,31 +559,60 @@ class HTTPConnection(object):
             pass
     """
 
-    def isBeekeepingAvailable(self):
+    def isBeekeepingAvailable(self, iUserLevel):
         """
         Funktion ermittelt, ob die Imkerei (Beekeeping) verfügbar ist und gibt True/False zurück.
         """
+
         headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
                              'wunr=' + self.__userID,
                    'Connection': 'Keep-Alive'}
         adresse = 'http://s' + str(self.__Session.getServer()) + \
                   '.wurzelimperium.de/ajax/gettrophies.php?category=giver'
-
-        try:
-            response, content = self.__webclient.request(adresse, 'GET', headers = headers)
-            self.__checkIfHTTPStateIsOK(response)
-            jContent = self.__generateJSONContentAndCheckForOK(content)
-        except:
-            raise
-        else:
-            if '316' in jContent['gifts']:
-                if (jContent['gifts']['316']['name'] == 'Bienen-Fan'):
-                    return True
+        
+        if not (iUserLevel < 10):
+            try:
+                response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+                self.__checkIfHTTPStateIsOK(response)
+                jContent = self.__generateJSONContentAndCheckForOK(content)
+            except:
+                raise
+            else:
+                if '316' in jContent['gifts']:
+                    if (jContent['gifts']['316']['name'] == 'Bienen-Fan'):
+                        return True
+                    else:
+                        return False
                 else:
                     return False
-            else:
-                return False
+        else:
+            return False
 
+            
+    def isWatergardenAvailable(self,iUserLevel):
+        """
+        """
+
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                   'Connection': 'Keep-Alive'}
+        adresse = 'http://s' + str(self.__Session.getServer()) + \
+                  '.wurzelimperium.de/ajax/achievements.php?token='+self.__token
+
+        if not (iUserLevel < 19):
+            try:
+                response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+                self.__checkIfHTTPStateIsOK(response)
+                jContent = self.__generateJSONContentAndCheckForOK(content)
+            except:
+                raise
+            else:
+                result = re.search(r'trophy_54.png\);[^;]*(gray)[^;^class$]*class', jContent['html'])
+                #TODO: Warum ein führendes r am Patternstring?
+                print result
+        else:
+            return False
+        
     #TODO: Was passiert wenn ein Garten hinzukommt (parallele Sitzungen im Browser und Bot)? Globale Aktualisierungsfunktion?
     
 class HTTPStateError(Exception):

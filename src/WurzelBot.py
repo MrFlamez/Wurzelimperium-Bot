@@ -36,6 +36,7 @@ class WurzelBot(object):
         """
         self.__logBot.info('Starte Wurzelbot')
         loginDaten = Login(server=server, user=user, password=pw)
+
         try:
             self.__HTTPConn.logIn(loginDaten)
         except:
@@ -57,11 +58,18 @@ class WurzelBot(object):
             self.__Spieler.GartenAnzahl = nGarden
         
         try:
-            bBee = self.__HTTPConn.isBeekeepingAvailable()
+            bBee = self.__HTTPConn.isBeekeepingAvailable(self.__Spieler.userData['levelnr'])
         except:
             self.__logBot.error('Verfügbarkeit der Imkerei konnte nicht ermittelt werden.')
         else:
             self.__Spieler.imkerei = bBee
+            
+        try:
+            bWatergarden = self.__HTTPConn.isWatergardenAvailable(self.__Spieler.userData['levelnr'])
+        except:
+            self.__logBot.error('Verfügbarkeit des Wassergartens konnte nicht ermittelt werden.')
+        else:
+            self.__Spieler.wassergarten = bWatergarden
         
         
         self.__Spieler.accountLogin = loginDaten
@@ -146,6 +154,6 @@ class WurzelBot(object):
 
     def test(self):
         #TODO: Für Testzwecke, kann später entfernt werden.
-        self.__HTTPConn.isTest()
+        self.__HTTPConn.isWatergardenAvailable()
 
 

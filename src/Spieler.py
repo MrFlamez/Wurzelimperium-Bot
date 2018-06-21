@@ -6,7 +6,8 @@ Created on 21.03.2017
 '''
 from collections import namedtuple
 
-Login = namedtuple('Login', ['server', 'user', 'password'])
+
+Login = namedtuple('Login', 'server user password')
 
 class Spieler():
     
@@ -20,6 +21,7 @@ class Spieler():
     GartenAnzahl = None
     userData = None
     imkerei = None
+    wassergarten = None
 
     def __init__(self):
         pass
