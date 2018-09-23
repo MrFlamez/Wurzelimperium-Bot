@@ -18,10 +18,10 @@ class Spieler():
     accountLogin = None
     userName = None
     userID = None
-    GartenAnzahl = None
+    numberOfGardens = None
     userData = None
-    imkerei = None
-    wassergarten = None
+    honeyFarmAvailability = None
+    aquaGardenAvailability = None
 
     def __init__(self):
         pass

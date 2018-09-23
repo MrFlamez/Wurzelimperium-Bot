@@ -222,15 +222,25 @@ class HTTPConnection(object):
 
     def __generateYAMLContentAndCheckForSuccess(self, content):
         """
-        Aufbereitung und Prüfung der vom Server empfangenen YAML Daten.
+        Aufbereitung und Prüfung der vom Server empfangenen YAML Daten auf Erfolg.
         """
         content = content.replace('\n', ' ')
         content = content.replace('\t', ' ')
         yContent = yaml.load(content)
         
-        if (yContent['success'] == 1): return yContent
-        else:
-            self.__logHTTPConn.debug(yContent)
+        if (yContent['success'] != 1):
+            raise YAMLError()
+
+
+    def __generateYAMLContentAndCheckStatusForOK(self, content):
+        """
+        Aufbereitung und Prüfung der vom Server empfangenen YAML Daten auf iO Status.
+        """
+        content = content.replace('\n', ' ')
+        content = content.replace('\t', ' ')
+        yContent = yaml.load(content)
+        
+        if (yContent['status'] != 'ok'):
             raise YAMLError()
 
 
@@ -353,9 +363,10 @@ class HTTPConnection(object):
             return self.__getUserDataFromJSONContent(jContent)
 
 
-    def getFieldIDsAndPlantsizeToWater(self, gardenID):
+    def getPlantsToWaterInGarden(self, gardenID):
         """
-        Ermittelt alle bepflanzten Felder, die im Garten mit der Nummer gardenID wachsen und gibt diese zurück.
+        Ermittelt alle bepflanzten Felder im Garten mit der Nummer gardenID,
+        die auch gegossen werden können und gibt diese zurück.
         """
         headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
                              'wunr=' + self.__userID,
@@ -374,7 +385,7 @@ class HTTPConnection(object):
             return self.__findPlantsToBeWateredFromJSONContent(jContent)
 
 
-    def waterField(self, iGarten, iField, sSize):
+    def waterPlantInGarden(self, iGarten, iField, sSize):
         """
         Bewässert die Pflanze iField mit der Größe sSize im Garten iGarten.
         """
@@ -391,14 +402,15 @@ class HTTPConnection(object):
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
             self.__checkIfHTTPStateIsOK(response)
-            yContent = self.__generateYAMLContentAndCheckForSuccess(content)
+            self.__generateYAMLContentAndCheckForSuccess(content)
         except:
             raise
 
 
-    def waterGarden(self): #TODO: Maintenance
+    def getPlantsToWaterInAquaGarden(self):
         """
-        Status: kA
+        Ermittelt alle bepflanzten Felder im Wassergartens,
+        die auch gegossen werden können und gibt diese zurück.
         """
 
         headers = {'User-Agent': self.__userAgent,\
@@ -410,30 +422,17 @@ class HTTPConnection(object):
         
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
-            print response
-            print content
             self.__checkIfHTTPStateIsOK(response)
             jContent = self.__generateJSONContentAndCheckForOK(content)
         except:
             raise HTTPRequestError('Fehler im HTTP Request der Funktion waterField()')
         else:
-            plantsToBeWatered = {'fieldID':[], 'size':[]}
-            for field in range(0, len(jContent['grow'])):
-                
-                plantedFieldID = jContent['grow'][field][0]
-                plantSize = jContent['garden'][str(plantedFieldID)][9]
-                
-                if not self.__isFieldWatered(jContent, plantedFieldID):
-                    fieldIDToBeWatered = jContent['water'][plantedFieldID-1][0]
-                    plantsToBeWatered['fieldID'].append(fieldIDToBeWatered)
-                    plantsToBeWatered['size'].append(plantSize)
-
-            return plantsToBeWatered
-
-    def waterWatergardenField(self, iField, sSize): #TODO: Maintenance
+            return self.__findPlantsToBeWateredFromJSONContent(jContent)
         
+
+    def waterPlantInAquaGarden(self, iField, sSize):
         """
-        Status: kA
+        Status:
         """
 
         sFieldsToWater = self.__getAllFieldIDsFromFieldIDAndSizeAsString(iField, sSize)
@@ -454,53 +453,110 @@ class HTTPConnection(object):
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
             self.__checkIfHTTPStateIsOK(response)
+            self.__generateYAMLContentAndCheckStatusForOK(content)
         except:
-            raise HTTPRequestError('Fehler im HTTP Request der Funktion waterField()')
+            raise
+
+
+    def isHoneyFarmAvailable(self, iUserLevel):
+        """
+        Funktion ermittelt, ob die Imkerei verfügbar ist und gibt True/False zurück.
+        Dazu muss ein Mindestlevel von 10 erreicht sein und diese dann freigeschaltet sein.
+        Die Freischaltung wird anhand eines Geschenks im Spiel geprüft.
+        """
+
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                   'Connection': 'Keep-Alive'}
+        adresse = 'http://s' + str(self.__Session.getServer()) + \
+                  '.wurzelimperium.de/ajax/gettrophies.php?category=giver'
+        
+        if not (iUserLevel < 10):
+            try:
+                response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+                self.__checkIfHTTPStateIsOK(response)
+                jContent = self.__generateJSONContentAndCheckForOK(content)
+            except:
+                raise
+            else:
+                if '316' in jContent['gifts']:
+                    if (jContent['gifts']['316']['name'] == 'Bienen-Fan'):
+                        return True
+                    else:
+                        return False
+                else:
+                    return False
         else:
-            content = content.replace('\n', ' ')
-            content = content.replace('\t', ' ')
-            yContent = yaml.load(content)
-            if (yContent['status'] != 'ok'):
-                print 'Fehler beim Giessen ' + str(yContent)
-                return -1
+            return False
 
+            
+    def isAquaGardenAvailable(self, iUserLevel):
+        """
+        Funktion ermittelt, ob ein Wassergarten verfügbar ist.
+        Dazu muss ein Mindestlevel von 19 erreicht sein und dieser dann freigeschaltet sein.
+        Die Freischaltung wird anhand der Errungenschaften im Spiel geprüft.
+        """
 
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                   'Connection': 'Keep-Alive'}
+        adresse = 'http://s' + str(self.__Session.getServer()) + \
+                  '.wurzelimperium.de/ajax/achievements.php?token='+self.__token
+
+        if not (iUserLevel < 19):
+            try:
+                response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+                self.__checkIfHTTPStateIsOK(response)
+                jContent = self.__generateJSONContentAndCheckForOK(content)
+            except:
+                raise
+            else:
+                result = re.search(r'trophy_54.png\);[^;]*(gray)[^;^class$]*class', jContent['html'])
+                if result == None:
+                    return True
+                else:
+                    return False
+        else:
+            return False
+
+    #TODO: Was passiert wenn ein Garten hinzukommt (parallele Sitzungen im Browser und Bot)? Globale Aktualisierungsfunktion?
 
     def sendMessage(self, msg_to, msg_subject, msg_body):
         """
         #E-Mail Adresse muss bestätigt sein!
-        #TODO: Beim Erstellen prüfen, ob Mail bestätigt ist.
-        
+        #TODO: Beim Erstellen prüfen, ob Mail bestätigt ist. String finden und RegEx
+        """
+
         #Neue Nachricht erstellen
-        headers = {'User-Agent': self.__userAgent,\
-                   'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
-                             'wunr=' + self.__userID,\
-                   'Content-type': 'application/x-www-form-urlencoded'}
+        #headers = {'User-Agent': self.__userAgent,\
+        #           'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+        #                     'wunr=' + self.__userID,\
+        #           'Content-type': 'application/x-www-form-urlencoded'}
         
-        response, content = self.__webclient.request('http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/nachrichten/new.php',
-                                                     'GET',
-                                                     headers = headers)
+        #response, content = self.__webclient.request('http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/nachrichten/new.php',
+        #                                             'GET',
+        #                                             headers = headers)
         
         #print response['status']
         
-        self.__HTMLParser.__init__(2)
-        self.__HTMLParser.setAttrs('name', 'hpc')
-        hpc = self.__HTMLParser.startParser(content)
+        #self.__HTMLParser.__init__(2)
+        #self.__HTMLParser.setAttrs('name', 'hpc')
+        #hpc = self.__HTMLParser.startParser(content)
 
 
         #Nachricht absenden
-        parameter = urlencode({'hpc': hpc,
-                               'msg_to': msg_to,
-                               'msg_subject': msg_subject,
-                               'msg_body': msg_body,
-                               'msg_send': 'senden'}) 
+        #parameter = urlencode({'hpc': hpc,
+        #                       'msg_to': msg_to,
+        #                       'msg_subject': msg_subject,
+        #                       'msg_body': msg_body,
+        #                       'msg_send': 'senden'}) 
                             
-        response2, content = self.__webclient.request('http://s' + str(self.__server) + '.wurzelimperium.de/nachrichten/new.php',
-                                                     'POST', parameter, headers)
+        #response2, content = self.__webclient.request('http://s' + str(self.__server) + '.wurzelimperium.de/nachrichten/new.php',
+        #                                             'POST', parameter, headers)
         
-        print content
-        """
+        #print content
         pass
+
     """
     def getUsrList(self, iStart, iEnd):
         
@@ -559,62 +615,7 @@ class HTTPConnection(object):
             pass
     """
 
-    def isBeekeepingAvailable(self, iUserLevel):
-        """
-        Funktion ermittelt, ob die Imkerei (Beekeeping) verfügbar ist und gibt True/False zurück.
-        """
 
-        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
-                             'wunr=' + self.__userID,
-                   'Connection': 'Keep-Alive'}
-        adresse = 'http://s' + str(self.__Session.getServer()) + \
-                  '.wurzelimperium.de/ajax/gettrophies.php?category=giver'
-        
-        if not (iUserLevel < 10):
-            try:
-                response, content = self.__webclient.request(adresse, 'GET', headers = headers)
-                self.__checkIfHTTPStateIsOK(response)
-                jContent = self.__generateJSONContentAndCheckForOK(content)
-            except:
-                raise
-            else:
-                if '316' in jContent['gifts']:
-                    if (jContent['gifts']['316']['name'] == 'Bienen-Fan'):
-                        return True
-                    else:
-                        return False
-                else:
-                    return False
-        else:
-            return False
-
-            
-    def isWatergardenAvailable(self,iUserLevel):
-        """
-        """
-
-        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
-                             'wunr=' + self.__userID,
-                   'Connection': 'Keep-Alive'}
-        adresse = 'http://s' + str(self.__Session.getServer()) + \
-                  '.wurzelimperium.de/ajax/achievements.php?token='+self.__token
-
-        if not (iUserLevel < 19):
-            try:
-                response, content = self.__webclient.request(adresse, 'GET', headers = headers)
-                self.__checkIfHTTPStateIsOK(response)
-                jContent = self.__generateJSONContentAndCheckForOK(content)
-            except:
-                raise
-            else:
-                result = re.search(r'trophy_54.png\);[^;]*(gray)[^;^class$]*class', jContent['html'])
-                #TODO: Warum ein führendes r am Patternstring?
-                print result
-        else:
-            return False
-        
-    #TODO: Was passiert wenn ein Garten hinzukommt (parallele Sitzungen im Browser und Bot)? Globale Aktualisierungsfunktion?
-    
 class HTTPStateError(Exception):
     def __init__(self, value):
         self.value = value
