@@ -158,8 +158,15 @@ class WurzelBot(object):
         if self.__Spieler.aquaGardenAvailability == True:
             self.waterPlantsInAquaGarden()
 
+    def writeMessages(self, recipients):
+        #prüfen, ob mail bestätigt ist
+        #for-schleife über recipients
+        #  new message, id generieren
+        #  sendmessage
+        pass
 
     def test(self):
         #TODO: Für Testzwecke, kann später entfernt werden.
+        id = self.__HTTPConn.createNewMessageAndGetID()
         pass
 

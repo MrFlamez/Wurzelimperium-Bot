@@ -425,7 +425,7 @@ class HTTPConnection(object):
             self.__checkIfHTTPStateIsOK(response)
             jContent = self.__generateJSONContentAndCheckForOK(content)
         except:
-            raise HTTPRequestError('Fehler im HTTP Request der Funktion waterField()')
+            raise
         else:
             return self.__findPlantsToBeWateredFromJSONContent(jContent)
         
@@ -521,41 +521,84 @@ class HTTPConnection(object):
 
     #TODO: Was passiert wenn ein Garten hinzukommt (parallele Sitzungen im Browser und Bot)? Globale Aktualisierungsfunktion?
 
-    def sendMessage(self, msg_to, msg_subject, msg_body):
+    def isEMailAdressConfirmed(self):
+        #pass
+        #"""
+        ##Prüft, ob die E-Mail Adresse im Profil bestätigt ist.
+        #"""
+        #TODO: muss vervollständigt werden.
+        #headers = {'User-Agent': self.__userAgent,\
+        #           'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+        #                     'wunr=' + self.__userID}
+
+        adresskkk = 5
+
+        try:
+            pass
+            #response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+        except:
+            raise
+        else:
+            #result = re.search('pattern', 'content')
+            
+            return False
+
+
+    
+    def createNewMessageAndGetID(self):
         """
-        #E-Mail Adresse muss bestätigt sein!
+        Erstellt eine neue Nachricht und gibt deren ID zurück, die für das Senden benötigt wird.
+		"""
+
+        headers = {'User-Agent': self.__userAgent,\
+                   'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,\
+                   'Content-type': 'application/x-www-form-urlencoded'}
+
+        adress = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/nachrichten/new.php'
+        
+        try:
+            response, content = self.__webclient.request(adress, 'GET', headers = headers)
+            self.__checkIfHTTPStateIsOK(response)
+        except:
+            raise
+        else:
+            result = re.search(r'name="hpc" value="(.*)" id="hpc"', content)
+            if result == None:
+                raise HTTPRequestError()
+            else:
+                return result.group(1)
+
+
+    def sendMessage(self, msg_id, msg_to, msg_subject, msg_body):
+        """
+        #E-Mail Adresse muss bestätigt sein!--> im Wurzelbot prüfen und Aufruf ggf verhindern.
         #TODO: Beim Erstellen prüfen, ob Mail bestätigt ist. String finden und RegEx
         """
 
-        #Neue Nachricht erstellen
-        #headers = {'User-Agent': self.__userAgent,\
-        #           'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
-        #                     'wunr=' + self.__userID,\
-        #           'Content-type': 'application/x-www-form-urlencoded'}
-        
-        #response, content = self.__webclient.request('http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/nachrichten/new.php',
-        #                                             'GET',
-        #                                             headers = headers)
-        
-        #print response['status']
-        
-        #self.__HTMLParser.__init__(2)
-        #self.__HTMLParser.setAttrs('name', 'hpc')
-        #hpc = self.__HTMLParser.startParser(content)
 
+
+        #Neue Nachricht erstellen
+        headers = {'User-Agent': self.__userAgent,\
+                   'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,\
+                   'Content-type': 'application/x-www-form-urlencoded'}
+
+        adress = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/nachrichten/new.php'
 
         #Nachricht absenden
-        #parameter = urlencode({'hpc': hpc,
-        #                       'msg_to': msg_to,
-        #                       'msg_subject': msg_subject,
-        #                       'msg_body': msg_body,
-        #                       'msg_send': 'senden'}) 
-                            
-        #response2, content = self.__webclient.request('http://s' + str(self.__server) + '.wurzelimperium.de/nachrichten/new.php',
-        #                                             'POST', parameter, headers)
-        
-        #print content
-        pass
+        parameter = urlencode({'hpc': msg_id,
+                               'msg_to': msg_to,
+                               'msg_subject': msg_subject,
+                               'msg_body': msg_body,
+                               'msg_send': 'senden'}) 
+        try:
+            response, content = self.__webclient.request(adress, 'POST', parameter, headers)
+        except:
+            raise
+        else:
+            #?
+            pass
 
     """
     def getUsrList(self, iStart, iEnd):
