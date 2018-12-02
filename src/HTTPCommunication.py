@@ -10,7 +10,7 @@ from urllib import urlencode
 import json, re, httplib2
 from Cookie import SimpleCookie
 from src.Session import Session
-import yaml, time, logging
+import yaml, time, logging, math
 
 
 #Defines
@@ -545,7 +545,7 @@ class HTTPConnection(object):
 
 
     
-    def createNewMessageAndGetID(self):
+    def createNewMessageAndReturnResult(self):
         """
         Erstellt eine neue Nachricht und gibt deren ID zurück, die für das Senden benötigt wird.
 		"""
@@ -563,22 +563,14 @@ class HTTPConnection(object):
         except:
             raise
         else:
-            result = re.search(r'name="hpc" value="(.*)" id="hpc"', content)
-            if result == None:
-                raise HTTPRequestError()
-            else:
-                return result.group(1)
+            return content
 
 
-    def sendMessage(self, msg_id, msg_to, msg_subject, msg_body):
+    def sendMessageAndReturnResult(self, msg_id, msg_to, msg_subject, msg_body):
         """
-        #E-Mail Adresse muss bestätigt sein!--> im Wurzelbot prüfen und Aufruf ggf verhindern.
-        #TODO: Beim Erstellen prüfen, ob Mail bestätigt ist. String finden und RegEx
+        Verschickt eine Nachricht mit den übergebenen Parametern.
         """
 
-
-
-        #Neue Nachricht erstellen
         headers = {'User-Agent': self.__userAgent,\
                    'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
                              'wunr=' + self.__userID,\
@@ -594,19 +586,20 @@ class HTTPConnection(object):
                                'msg_send': 'senden'}) 
         try:
             response, content = self.__webclient.request(adress, 'POST', parameter, headers)
+            self.__checkIfHTTPStateIsOK(response)
+            return content
         except:
             raise
-        else:
-            #?
-            pass
 
-    """
+
+
     def getUsrList(self, iStart, iEnd):
-        
+        """
+        #TODO: finalisieren
+        """
         userList = {'Nr':[], 'Gilde':[], 'Name':[], 'Punkte':[]}
         #iStart darf nicht 0 sein, da sonst beim korrigierten Index -1 übergeben wird
-        if (iStart == 0):
-            iStart = 1
+        if (iStart <= 0): iStart = 1
         
         if (iStart == iEnd or iStart > iEnd):
             return False
@@ -614,33 +607,35 @@ class HTTPConnection(object):
         iStartCorr = iStart - 1
         iCalls = int(math.ceil(float(iEnd-iStart)/100))
         
-        headers = {'Cookie': 'PHPSESSID=' + self.__PHPSESSID + '; wunr=' + self.__wunr}
-        
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID}
+        print iCalls
         for i in range(iCalls):
             print i
-            response, content = self.__webclient.request('http://s' + str(self.__server) + '.wurzelimperium.de/ajax/ajax.php?do=statsGetStats&which=1&start='+str(iStartCorr)+'&showMe=0&additional=0&token=' + self.__token,
-                                                         'GET',
-                                                         headers = headers)
-            
-            j = json.loads(content)
-            if (j['status'] == 'ok'):
-                
-                self.__HTMLParser.__init__(3)
-                if (i == 0):
-                    userList = self.__HTMLParser.startParser(str(j['table']))
-                else:
-                    tmp = self.__HTMLParser.startParser(str(j['table']))
-                    userList['Nr'] = userList['Nr'] + tmp['Nr']
-                    userList['Gilde'] = userList['Gilde'] + tmp['Gilde']
-                    userList['Name'] = userList['Name'] + tmp['Name']
-                    userList['Punkte'] = userList['Punkte'] + tmp['Punkte']
+            adress = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/ajax/ajax.php?do=statsGetStats&which=1&start='+str(iStartCorr)+'&showMe=0&additional=0&token=' + self.__token
+            try:
+                response, content = self.__webclient.request(adress, 'GET', headers = headers)
+                self.__checkIfHTTPStateIsOK(response)
+                jContent = self.__generateJSONContentAndCheckForOK(content)
+            except:
+                raise
             else:
-                return False
+                try:
+                    for j in jContent['table']:
+                        result = re.search(r'<tr><td class=".*">(.*)<\/td><td class=".*tag">(.*)<\/td><td class=".*uname">([^<]*)<.*class=".*pkt">(.*)<\/td><\/tr>', j)
+                        userList['Nr'].append(str(result.group(1)).replace('.', ''))
+                        userList['Gilde'].append(str(result.group(2)))
+                        userList['Name'].append(str(result.group(3).encode('utf-8')).replace('&nbsp;', ''))
+                        userList['Punkte'].append(int(str(result.group(4).replace('.', ''))))
+                except:
+                    raise
             
             iStartCorr = iStartCorr + 100
         
         return userList
-        
+    
+    
+    """
     def changeGarden(self, iGarten):
 
         headers = {'User-Agent': self.__userAgent,\

@@ -8,6 +8,7 @@ Created on 21.03.2017
 
 from src.Spieler import Spieler, Login
 from src.HTTPCommunication import HTTPConnection
+from src.Messenger import Messenger
 import logging
 
 
@@ -27,6 +28,7 @@ class WurzelBot(object):
         self.__logBot.setLevel(logging.DEBUG)
         self.__HTTPConn = HTTPConnection()
         self.__Spieler = Spieler()
+        self.Messenger = Messenger(self.__HTTPConn)
         
 
     def launchBot(self, server, user, pw):
@@ -69,14 +71,14 @@ class WurzelBot(object):
         except:
             self.__logBot.error('Verfügbarkeit der Imkerei konnte nicht ermittelt werden.')
         else:
-            self.__Spieler.honeyFarmAvailability = tmpHoneyFarmAvailability
+            self.__Spieler.setHoneyFarmAvailability(tmpHoneyFarmAvailability)
 
         try:
             tmpAquaGardenAvailability = self.__HTTPConn.isAquaGardenAvailable(self.__Spieler.userData['levelnr'])
         except:
             self.__logBot.error('Verfügbarkeit des Wassergartens konnte nicht ermittelt werden.')
         else:
-            self.__Spieler.aquaGardenAvailability = tmpAquaGardenAvailability
+            self.__Spieler.setAquaGardenAvailability(tmpAquaGardenAvailability)
         
         
         self.__Spieler.accountLogin = loginDaten
@@ -139,13 +141,14 @@ class WurzelBot(object):
         """
         Alle Pflanzen im Wassergarten werden bewässert.
         """
-        try:
-            plants = self.__HTTPConn.getPlantsToWaterInAquaGarden()
-        except:
-            logging.warning('Kein Wassergarten vorhanden')
-        else:
-            for i in range(0, len(plants['fieldID'])):
-                self.__HTTPConn.waterPlantInAquaGarden(plants['fieldID'][i], plants['size'][i])
+        if self.__Spieler.isAquaGardenAvailable() == True:
+            try:
+                plants = self.__HTTPConn.getPlantsToWaterInAquaGarden()
+            except:
+                logging.warning('Konnte Wassergarten nicht wässern')
+            else:
+                for i in range(0, len(plants['fieldID'])):
+                    self.__HTTPConn.waterPlantInAquaGarden(plants['fieldID'][i], plants['size'][i])
 
 
     def waterPlantsInAllGardens(self):
@@ -154,19 +157,26 @@ class WurzelBot(object):
         """
         for gardenID in range(1, self.__Spieler.numberOfGardens + 1):
             self.waterPlantsInGarden(gardenID)
-        
-        if self.__Spieler.aquaGardenAvailability == True:
-            self.waterPlantsInAquaGarden()
+        self.waterPlantsInAquaGarden()
 
-    def writeMessages(self, recipients):
-        #prüfen, ob mail bestätigt ist
-        #for-schleife über recipients
-        #  new message, id generieren
-        #  sendmessage
-        pass
+
+    def writeMessagesIfMailIsConfirmed(self, recipients, subject, body):
+        """
+        Erstellt eine neue Nachricht, füllt diese aus und verschickt sie.
+        recipients muss ein Array sein!.
+        """
+        #TODO: Zusammenhang zwischen E-Mail und Nachrichten klären
+        if self.__Spieler.eMailAdressConfirmed == True:
+            try:
+                self.Messenger.writeMessage(self.__Spieler.getUserName(), recipients, subject, body)
+            except:
+                self.__logBot.error('Konnte keine Nachricht verschicken.')
+            else:
+                pass
+        
 
     def test(self):
         #TODO: Für Testzwecke, kann später entfernt werden.
-        id = self.__HTTPConn.createNewMessageAndGetID()
+        #return self.__HTTPConn.getUsrList(1, 15000)
         pass
 
