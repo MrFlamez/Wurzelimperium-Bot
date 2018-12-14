@@ -46,18 +46,16 @@ class WurzelBot(object):
             return
         
         try:
-            userName = self.__HTTPConn.getUserName()
+            self.__Spieler.setUserNameFromServer(self.__HTTPConn)
         except:
             self.__logBot.error('Username konnte nicht ermittelt werden.')
-        else:
-            self.__Spieler.userName = userName
+
 
         try:
-            userData = self.__HTTPConn.readUserDataFromServer()
+            self.__Spieler.setUserDataFromServer(self.__HTTPConn)
         except:
             self.__logBot.error('UserDaten konnten nicht aktualisiert werden')
-        else:
-            self.__Spieler.userData = userData
+
 
         try:
             tmpNumberOfGardens = self.__HTTPConn.getNumberOfGardens()
@@ -82,7 +80,7 @@ class WurzelBot(object):
         
         
         self.__Spieler.accountLogin = loginDaten
-        self.__Spieler.userID = self.__HTTPConn.getUserID()
+        self.__Spieler.setUserID(self.__HTTPConn.getUserID())
 
 
     def exitBot(self):
@@ -130,7 +128,6 @@ class WurzelBot(object):
             nPlants = len(plants['fieldID'])
             for i in range(0, nPlants):
                 self.__HTTPConn.waterPlantInGarden(gardenID, plants['fieldID'][i], plants['size'][i])
-                print (str(i+1) + ' von ' + str(nPlants)) #TODO: Kann später entfernt werden
         except:
             self.__logBot.error('Garten ' + str(gardenID) + ' konnte nicht bewässert werden.')
         else:
@@ -164,9 +161,9 @@ class WurzelBot(object):
         """
         Erstellt eine neue Nachricht, füllt diese aus und verschickt sie.
         recipients muss ein Array sein!.
+        Eine Nachricht kann nur verschickt werden, wenn die E-Mail Adresse bestätigt ist.
         """
-        #TODO: Zusammenhang zwischen E-Mail und Nachrichten klären
-        if self.__Spieler.eMailAdressConfirmed == True:
+        if (self.__Spieler.isEMailAdressConfirmed()):
             try:
                 self.Messenger.writeMessage(self.__Spieler.getUserName(), recipients, subject, body)
             except:
@@ -174,9 +171,47 @@ class WurzelBot(object):
             else:
                 pass
         
-
+    def getEmptyFieldsOfGarden(self, gardenID):
+        """
+        Gibt alle leeren Felder eines Gartens mit der gardenID zurück.
+        """
+        try:
+            self.__HTTPConn.getEmptyFields(gardenID)
+        except:
+            self.__logBot.error('Konnte leere Felder von Garten ' + str(gardenID) + ' nicht ermitteln.')
+        else:
+            pass
+        
+    def getEmptyFieldsOfAllGardens(self):
+        """
+        Gibt alle leeren Felder aller Gärtens zurück.
+        """
+        #TODO: Wassergarten ergänzen
+        emptyFields = []
+        try:
+            for gardenID in range(1, self.__Spieler.numberOfGardens + 1):
+                emptyFields.append(self.__HTTPConn.getEmptyFields(gardenID))
+        except:
+            self.__logBot.error('Konnte leere Felder von Garten ' + str(gardenID) + ' nicht ermitteln.')
+        else:
+            pass
+        
+    def harvestAllGarden(self):
+        #TODO: Wassergarten ergänzen
+        try:
+            for gardenID in range(1, self.__Spieler.numberOfGardens + 1):
+                self.__HTTPConn.harvestGarden(gardenID)
+        except:
+            self.__logBot.error('Konnte nicht alle Gärten ernten.')
+        else:
+            pass
+    
     def test(self):
         #TODO: Für Testzwecke, kann später entfernt werden.
         #return self.__HTTPConn.getUsrList(1, 15000)
-        pass
+        #self.__HTTPConn.readStorageFromServer()
+        for gardenID in range(1, self.__Spieler.numberOfGardens + 1):
+            emptyFields = self.__HTTPConn.getEmptyFields(gardenID)
+            for field in emptyFields:
+                self.__HTTPConn.growPlant(field, 6, gardenID)
 

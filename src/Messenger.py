@@ -131,6 +131,24 @@ class Messenger():
             return id
 
 
+    def __getMessageByState(self):
+        """
+        """
+        pass
+
+        
+    def getMessagesWithFailedState(self):
+        """
+        """
+        pass
+
+
+    def getMessagesWithUnknownState(self):
+        """
+        """
+        pass
+    
+
     def clearSentList(self):
         """
         Löscht die Liste der gesendeten Nachrichten.

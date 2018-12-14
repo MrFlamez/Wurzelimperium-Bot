@@ -218,7 +218,22 @@ class HTTPConnection(object):
                 plantsToBeWatered['size'].append(plantSize)
 
         return plantsToBeWatered
+    
+    def __findEmptyFieldsFromJSONContent(self, jContent):
+        """
+        Sucht im JSON Content nach Felder die leer sind und gibt diese zurück.
+        """
+        emptyFields = []
+        
+        for field in jContent['garden']:
+            if jContent['garden'][field][0] == 0:
+                emptyFields.append(int(field))
 
+        #Sortierung über ein leeres Array ändert Objekttyp zu None
+        if len(emptyFields) > 0:
+            emptyFields.sort(reverse=False)
+
+        return emptyFields
 
     def __generateYAMLContentAndCheckForSuccess(self, content):
         """
@@ -243,6 +258,25 @@ class HTTPConnection(object):
         if (yContent['status'] != 'ok'):
             raise YAMLError()
 
+    def __changeGarden(self, gardenID):
+        """
+        Wechselt den Garten.
+        """
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                   'Connection': 'Keep-Alive'}
+
+        adresse = 'http://s' + str(self.__Session.getServer()) + \
+                  '.wurzelimperium.de/ajax/ajax.php?do=changeGarden&garden=' + \
+                  str(gardenID) + '&token=' + self.__token
+
+        try:
+            response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+            self.__checkIfHTTPStateIsOK(response)
+        except:
+            raise
+        else:
+            pass
 
     def logIn(self, loginDaten):
         """
@@ -521,30 +555,27 @@ class HTTPConnection(object):
 
     #TODO: Was passiert wenn ein Garten hinzukommt (parallele Sitzungen im Browser und Bot)? Globale Aktualisierungsfunktion?
 
-    def isEMailAdressConfirmed(self):
-        #pass
-        #"""
-        ##Prüft, ob die E-Mail Adresse im Profil bestätigt ist.
-        #"""
-        #TODO: muss vervollständigt werden.
-        #headers = {'User-Agent': self.__userAgent,\
-        #           'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
-        #                     'wunr=' + self.__userID}
+    def checkIfEMailAdressIsConfirmed(self):
+        """
+        Prüft, ob die E-Mail Adresse im Profil bestätigt ist.
+        """
+        headers = {'User-Agent': self.__userAgent,\
+                   'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID}
 
-        adresskkk = 5
+        adresse = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/nutzer/profil.php'
 
         try:
-            pass
-            #response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+            response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+            self.__checkIfHTTPStateIsOK(response)
         except:
             raise
         else:
-            #result = re.search('pattern', 'content')
-            
-            return False
+            result = re.search(r'Unbestätigte Email:', content)
+            if (result == None): return True
+            else: return False
 
 
-    
     def createNewMessageAndReturnResult(self):
         """
         Erstellt eine neue Nachricht und gibt deren ID zurück, die für das Senden benötigt wird.
@@ -633,27 +664,90 @@ class HTTPConnection(object):
             iStartCorr = iStartCorr + 100
         
         return userList
-    
-    
-    """
-    def changeGarden(self, iGarten):
 
+    def readStorageFromServer(self):
+        
         headers = {'User-Agent': self.__userAgent,\
                    'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
-                             'wunr=' + self.__userID,\
-                   'X-Requested-With': 'XMLHttpRequest',\
-                   'Connection': 'Keep-Alive'}
-        adresse = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/ajax/ajax.php?do=changeGarden&garden='+str(iGarten)+'&token='+self.__token
+                             'wunr=' + self.__userID}
+        
+        adress = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/ajax/updatelager.' + \
+                 'php?all=1'
+        
         try:
-            response, content = self.__webclient.request(adresse, 'GET', headers = headers)    
+            response, content = self.__webclient.request(adress, 'GET', headers = headers)
+            self.__checkIfHTTPStateIsOK(response)
+            jContent = self.__generateJSONContentAndCheckForOK(content)
         except:
-            print 'Fehler im HTTP Request der Funktion waterField()'
-            return -1
+            raise
+        else:
+            print jContent['produkte']
+            
+    def getEmptyFields(self, gardenID):
+        """
+        Gibt alle leeren Felder eines Gartens zurück.
+        """
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                   'Connection': 'Keep-Alive'}
+        adresse = 'http://s' + str(self.__Session.getServer()) + \
+                  '.wurzelimperium.de/ajax/ajax.php?do=changeGarden&garden=' + \
+                  str(gardenID) + '&token=' + self.__token
+
+        try:
+            response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+            self.__checkIfHTTPStateIsOK(response)
+            jContent = self.__generateJSONContentAndCheckForOK(content)
+            emptyFields = self.__findEmptyFieldsFromJSONContent(jContent)
+        except:
+            raise
+        else:
+            return emptyFields
+
+    def harvestGarden(self, gardenID):
+        """
+        Erntet alle fertigen Pflanzen im Garten.
+        """
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                   'Connection': 'Keep-Alive'}
+    
+        adresse = 'http://s' + str(self.__Session.getServer()) + \
+                  '.wurzelimperium.de/ajax/ajax.php?do=gardenHarvestAll&token=' + self.__token
+
+        try:
+            self.__changeGarden(gardenID)
+            response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+        #TODO: Response auf HTTP Fehler prüfen?
+        except:
+            raise
         else:
             pass
-    """
-
-
+        
+    def growPlant(self, field, plant, gardenID):
+        """
+        Baut eine Pflanze auf einem Feld an.
+        """
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                   'Connection': 'Keep-Alive'}
+    
+        adresse = 'http://s' + str(self.__Session.getServer()) + \
+                  '.wurzelimperium.de/save/pflanz.php?pflanze[]=' + str(plant) + \
+                  '&feld[]=' + str(field) + \
+                  '&felder[]=' + str(field) + \
+                  '&cid=' + self.__token + \
+                  '&garden=' + str(gardenID)
+    
+        try:
+            response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+        except:
+            print 'except'
+            raise
+        else:
+            pass
+        
+        
 class HTTPStateError(Exception):
     def __init__(self, value):
         self.value = value
