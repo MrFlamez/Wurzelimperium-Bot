@@ -112,17 +112,6 @@ class HTTPConnection(object):
         else: return True
 
 
-    def __getAllFieldIDsFromFieldIDAndSizeAsString(self, fieldID, plantSize):
-        """
-        Rechnet anhand der fieldID und plantSize alle IDs aus und gibt diese zurück.
-        """
-        if (plantSize == '1x1'): return str(fieldID)
-        if (plantSize == '2x1'): return str(fieldID) + ',' + str(fieldID + 1)
-        if (plantSize == '1x2'): return str(fieldID) + ',' + str(fieldID + 17)
-        if (plantSize == '2x2'): return str(fieldID) + ',' + str(fieldID + 1) + ',' + str(fieldID + 17) + ',' + str(fieldID + 18)
-        self.__logHTTPConn.debug('Error der plantSize --> ' + plantSize)
-
-
     def __getTokenFromURL(self, url):
         """
         Ermittelt aus einer übergebenen URL den security token.
@@ -206,16 +195,19 @@ class HTTPConnection(object):
         """
         Sucht im JSON Content nach Pflanzen die bewässert werden können und gibt diese inkl. der Pflanzengröße zurück.
         """
-        plantsToBeWatered = {'fieldID':[], 'size':[]}
+        plantsToBeWatered = {'fieldID':[], 'sx':[], 'sy':[]}
         for field in range(0, len(jContent['grow'])):
             plantedFieldID = jContent['grow'][field][0]
             plantSize = jContent['garden'][str(plantedFieldID)][9]
-            #neededFields = self.getNumberOfFieldsFromSizeOfPlant(plantSize)
+            splittedPlantSize = str(plantSize).split('x')
+            sx = splittedPlantSize[0]
+            sy = splittedPlantSize[1]
             
             if not self.__isFieldWatered(jContent, plantedFieldID):
                 fieldIDToBeWatered = plantedFieldID
                 plantsToBeWatered['fieldID'].append(fieldIDToBeWatered)
-                plantsToBeWatered['size'].append(plantSize)
+                plantsToBeWatered['sx'].append(sx)
+                plantsToBeWatered['sy'].append(sy)
 
         return plantsToBeWatered
     
@@ -419,12 +411,11 @@ class HTTPConnection(object):
             return self.__findPlantsToBeWateredFromJSONContent(jContent)
 
 
-    def waterPlantInGarden(self, iGarten, iField, sSize):
+    def waterPlantInGarden(self, iGarten, iField, sFieldsToWater):
         """
         Bewässert die Pflanze iField mit der Größe sSize im Garten iGarten.
         """
-        sFieldsToWater = self.__getAllFieldIDsFromFieldIDAndSizeAsString(iField, sSize)
-        
+
         headers = {'User-Agent': self.__userAgent,\
                    'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
                              'wunr=' + self.__userID,\
@@ -464,12 +455,11 @@ class HTTPConnection(object):
             return self.__findPlantsToBeWateredFromJSONContent(jContent)
         
 
-    def waterPlantInAquaGarden(self, iField, sSize):
+    def waterPlantInAquaGarden(self, iField, sFieldsToWater):
         """
         Status:
         """
 
-        sFieldsToWater = self.__getAllFieldIDsFromFieldIDAndSizeAsString(iField, sSize)
         listFieldsToWater = sFieldsToWater.split(',')
         
         sFields = ''
@@ -724,7 +714,7 @@ class HTTPConnection(object):
         else:
             pass
         
-    def growPlant(self, field, plant, gardenID):
+    def growPlant(self, field, plant, gardenID, fields):
         """
         Baut eine Pflanze auf einem Feld an.
         """
@@ -735,7 +725,7 @@ class HTTPConnection(object):
         adresse = 'http://s' + str(self.__Session.getServer()) + \
                   '.wurzelimperium.de/save/pflanz.php?pflanze[]=' + str(plant) + \
                   '&feld[]=' + str(field) + \
-                  '&felder[]=' + str(field) + \
+                  '&felder[]=' + fields + \
                   '&cid=' + self.__token + \
                   '&garden=' + str(gardenID)
     
