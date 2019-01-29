@@ -45,6 +45,9 @@ class Spieler():
     def getUserName(self):
         return self.userName
     
+    def getLevelNr(self):
+        return self.__userData['levelnr']
+    
     def setUserNameFromServer(self, http):
         """
         Liest den Spielernamen vom Server und speichert ihn in der Klasse.

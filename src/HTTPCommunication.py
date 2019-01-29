@@ -673,7 +673,7 @@ class HTTPConnection(object):
         else:
             print jContent['produkte']
             
-    def getEmptyFields(self, gardenID):
+    def getEmptyFieldsOfGarden(self, gardenID):
         """
         Gibt alle leeren Felder eines Gartens zurück.
         """
@@ -737,7 +737,26 @@ class HTTPConnection(object):
         else:
             pass
         
+    def getAllProductInformation(self):
+        """
+        Sammelt alle Produktinformationen und gibt diese zur Weiterverarbeitung zurück.
+        """
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                   'Connection': 'Keep-Alive'}
         
+        adresse = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/main.php?page=garden'
+        """          
+        'data_products = ({.*})'
+        try:
+            response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+            print response
+        except:
+            print 'except'
+            raise
+        else:
+            pass
+        """
 class HTTPStateError(Exception):
     def __init__(self, value):
         self.value = value
