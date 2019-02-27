@@ -28,7 +28,7 @@ class HTTPConnection(object):
     def __init__(self):
         self.__webclient = httplib2.Http()
         self.__webclient.follow_redirects = False
-        self.__userAgent = 'Opera/9.80 (Windows NT 6.1; Win64; x64) Presto/2.12.388 Version/12.17'
+        self.__userAgent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 Vivaldi/2.2.1388.37'
         self.__logHTTPConn = logging.getLogger('bot.HTTPConn')
         self.__logHTTPConn.setLevel(logging.DEBUG)
         self.__Session = Session()
@@ -206,8 +206,8 @@ class HTTPConnection(object):
             if not self.__isFieldWatered(jContent, plantedFieldID):
                 fieldIDToBeWatered = plantedFieldID
                 plantsToBeWatered['fieldID'].append(fieldIDToBeWatered)
-                plantsToBeWatered['sx'].append(sx)
-                plantsToBeWatered['sy'].append(sy)
+                plantsToBeWatered['sx'].append(int(sx))
+                plantsToBeWatered['sy'].append(int(sy))
 
         return plantsToBeWatered
     
@@ -280,7 +280,7 @@ class HTTPConnection(object):
                             'pass': loginDaten.password}) 
     
         headers = {'Content-type': 'application/x-www-form-urlencoded',
-                   'Connection': 'Keep-Alive'}
+                   'Connection': 'keep-alive'}
 
         try:
             response, content = self.__webclient.request('http://www.wurzelimperium.de/dispatch.php', \
@@ -290,14 +290,14 @@ class HTTPConnection(object):
             self.__checkIfHTTPStateIsOK(response)
             jContent = self.__generateJSONContentAndCheckForOK(content)
             self.__getTokenFromURL(jContent['url'])
-            
-            response, content = self.__webclient.request(jContent['url'], 'GET')
+            response, content = self.__webclient.request(jContent['url'], 'GET', headers=headers)
             self.__checkIfHTTPStateIsFOUND(response)
         except:
             raise
         else:
             cookie = SimpleCookie(response['set-cookie'])
             self.__Session.openSession(cookie['PHPSESSID'].value, str(loginDaten.server))
+            self.__cookie = cookie
             self.__userID = cookie['wunr'].value
 
 
@@ -355,7 +355,9 @@ class HTTPConnection(object):
         """
         headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
                              'wunr=' + self.__userID,
-                   'Connection': 'Keep-Alive'}
+                   'Connection': 'Keep-Alive',
+                   'Referer':'http://s46.wurzelimperium.de/main.php?page=garden', 
+                   'X-Requested-With':'X-Requested-With: XMLHttpRequest'}
         adresse = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/ajax/ajax.php?do=statsGetStats&which=0&start=0&additional='+\
                   self.__userID + '&token=' + self.__token
         
@@ -399,7 +401,7 @@ class HTTPConnection(object):
                    'Connection': 'Keep-Alive'}
         adresse = 'http://s' + str(self.__Session.getServer()) + \
                   '.wurzelimperium.de/ajax/ajax.php?do=changeGarden&garden=' + \
-                  str(gardenID) + '&token=' + self.__token
+                  str(gardenID) + '&token=' + str(self.__token)
 
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
@@ -737,26 +739,47 @@ class HTTPConnection(object):
         else:
             pass
         
-    def getAllProductInformation(self):
+    def getAllProductInformations(self):
         """
         Sammelt alle Produktinformationen und gibt diese zur Weiterverarbeitung zurück.
         """
+
         headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
-                             'wunr=' + self.__userID,
-                   'Connection': 'Keep-Alive'}
-        
+                             'wunr=' + self.__userID}
+
         adresse = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/main.php?page=garden'
-        """          
-        'data_products = ({.*})'
+
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
-            print response
+            self.__checkIfHTTPStateIsOK(response)
+            reToken = re.search(r'ajax\.setToken\(\"(.*)\"\);', content)
+            self.__token = reToken.group(1) #TODO: except, wenn token nicht aktualisiert werden kann
+            reProducts = re.search(r'data_products = ({.*})', content)
         except:
-            print 'except'
             raise
         else:
-            pass
+            return reProducts.group(1)
+            
+    def getInventory(self):
         """
+        Ermittelt den Lagerbestand und gibt diesen zurück.
+        """
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                    'Content-Length':'0'}
+    
+        adresse = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/ajax/updatelager.php?' + \
+              'all=1&sort=1&type=honey&token=' + self.__token
+              
+        try:
+            response, content = self.__webclient.request(adresse, 'POST', headers = headers)
+            self.__checkIfHTTPStateIsOK(response)
+            jContent = self.__generateJSONContentAndCheckForOK(content)
+        except:
+            pass
+        else:
+            return jContent['produkte']
+
 class HTTPStateError(Exception):
     def __init__(self, value):
         self.value = value

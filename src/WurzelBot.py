@@ -10,6 +10,7 @@ from src.Spieler import Spieler, Login
 from src.HTTPCommunication import HTTPConnection
 from src.Messenger import Messenger
 from src.Garten import Garden
+from src.Lager import Storage
 import logging
 
 
@@ -25,9 +26,10 @@ class WurzelBot(object):
         self.__logBot = logging.getLogger("bot")
         self.__logBot.setLevel(logging.DEBUG)
         self.__HTTPConn = HTTPConnection()
-        self.Spieler = Spieler()
-        self.Messenger = Messenger(self.__HTTPConn)
-        self.Garten = []
+        self.spieler = Spieler()
+        self.messenger = Messenger(self.__HTTPConn)
+        self.storage = Storage(self.__HTTPConn)
+        self.garten = []
 
 
     def __initGardens(self):
@@ -36,9 +38,9 @@ class WurzelBot(object):
         """
         try:
             tmpNumberOfGardens = self.__HTTPConn.getNumberOfGardens()
-            self.Spieler.numberOfGardens = tmpNumberOfGardens
+            self.spieler.numberOfGardens = tmpNumberOfGardens
             for i in range(1, tmpNumberOfGardens + 1):
-                self.Garten.append(Garden(self.__HTTPConn, i))
+                self.garten.append(Garden(self.__HTTPConn, i))
         except:
             raise
 
@@ -82,13 +84,13 @@ class WurzelBot(object):
             return
         
         try:
-            self.Spieler.setUserNameFromServer(self.__HTTPConn)
+            self.spieler.setUserNameFromServer(self.__HTTPConn)
         except:
             self.__logBot.error('Username konnte nicht ermittelt werden.')
 
 
         try:
-            self.Spieler.setUserDataFromServer(self.__HTTPConn)
+            self.spieler.setUserDataFromServer(self.__HTTPConn)
         except:
             self.__logBot.error('UserDaten konnten nicht aktualisiert werden')
 
@@ -98,22 +100,22 @@ class WurzelBot(object):
             self.__logBot.error('Anzahl der Gärten konnte nicht ermittelt werden.')
         
         try:
-            tmpHoneyFarmAvailability = self.__HTTPConn.isHoneyFarmAvailable(self.Spieler.getLevelNr())
+            tmpHoneyFarmAvailability = self.__HTTPConn.isHoneyFarmAvailable(self.spieler.getLevelNr())
         except:
             self.__logBot.error('Verfügbarkeit der Imkerei konnte nicht ermittelt werden.')
         else:
-            self.Spieler.setHoneyFarmAvailability(tmpHoneyFarmAvailability)
+            self.spieler.setHoneyFarmAvailability(tmpHoneyFarmAvailability)
 
         try:
-            tmpAquaGardenAvailability = self.__HTTPConn.isAquaGardenAvailable(self.Spieler.getLevelNr())
+            tmpAquaGardenAvailability = self.__HTTPConn.isAquaGardenAvailable(self.spieler.getLevelNr())
         except:
             self.__logBot.error('Verfügbarkeit des Wassergartens konnte nicht ermittelt werden.')
         else:
-            self.Spieler.setAquaGardenAvailability(tmpAquaGardenAvailability)
+            self.spieler.setAquaGardenAvailability(tmpAquaGardenAvailability)
         
-        
-        self.Spieler.accountLogin = loginDaten
-        self.Spieler.setUserID(self.__HTTPConn.getUserID())
+        self.spieler.accountLogin = loginDaten
+        self.spieler.setUserID(self.__HTTPConn.getUserID())
+        self.storage.initAllProducts()
 
 
     def exitBot(self):
@@ -138,14 +140,14 @@ class WurzelBot(object):
         except:
             self.__logBot.error('UserDaten konnten nicht aktualisiert werden')
         else:
-            self.Spieler.userData = userData
+            self.spieler.userData = userData
 
 
     def waterPlantsInAquaGarden(self):
         """
         Alle Pflanzen im Wassergarten werden bewässert.
         """
-        if self.Spieler.isAquaGardenAvailable() == True:
+        if self.spieler.isAquaGardenAvailable() == True:
             try:
                 plants = self.__HTTPConn.getPlantsToWaterInAquaGarden()
                 nPlants = len(plants['fieldID'])
@@ -162,7 +164,7 @@ class WurzelBot(object):
         """
         Alle Gärten des Spielers werden komplett bewässert.
         """
-        for garden in self.Garten:
+        for garden in self.garten:
             garden.waterPlants()
         self.waterPlantsInAquaGarden()
 
@@ -173,9 +175,9 @@ class WurzelBot(object):
         recipients muss ein Array sein!.
         Eine Nachricht kann nur verschickt werden, wenn die E-Mail Adresse bestätigt ist.
         """
-        if (self.Spieler.isEMailAdressConfirmed()):
+        if (self.spieler.isEMailAdressConfirmed()):
             try:
-                self.Messenger.writeMessage(self.Spieler.getUserName(), recipients, subject, body)
+                self.messenger.writeMessage(self.spieler.getUserName(), recipients, subject, body)
             except:
                 self.__logBot.error('Konnte keine Nachricht verschicken.')
             else:
@@ -189,7 +191,7 @@ class WurzelBot(object):
         #TODO: Wassergarten ergänzen
         emptyFields = []
         try:
-            for garden in self.Garten:
+            for garden in self.garten:
                 emptyFields.append(Garden.getEmptyFields())
         except:
             self.__logBot.error('Konnte leere Felder von Garten ' + str(garden.getID()) + ' nicht ermitteln.')
@@ -199,7 +201,7 @@ class WurzelBot(object):
     def harvestAllGarden(self):
         #TODO: Wassergarten ergänzen
         try:
-            for garden in self.Garten:
+            for garden in self.garten:
                 garden.harvest()
         except:
             self.__logBot.error('Konnte nicht alle Gärten ernten.')
@@ -207,12 +209,14 @@ class WurzelBot(object):
             pass
 
 
-    def growPlantsInGardens(self, plantID, sx, sy):
+    def growPlantsInGardens(self, productName):
         """
         Pflanzt so viele Pflanzen von einer Sorte wie möglich über alle Gärten hinweg an.
         """
-        for garden in self.Garten:
-            garden.growPlant(plantID, sx, sy)
+        product = self.storage.getProductByName(productName)
+        if (product.isProductPlantable()):
+            for garden in self.garten:
+                garden.growPlant(product.getID(), product.getSX(), product.getSY())
             
 
     def test(self):
