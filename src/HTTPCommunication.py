@@ -26,7 +26,7 @@ class HTTPConnection(object):
     """
 
     def __init__(self):
-        self.__webclient = httplib2.Http()
+        self.__webclient = httplib2.Http(disable_ssl_certificate_validation=True)
         self.__webclient.follow_redirects = False
         self.__userAgent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 Vivaldi/2.2.1388.37'
         self.__logHTTPConn = logging.getLogger('bot.HTTPConn')
@@ -283,7 +283,7 @@ class HTTPConnection(object):
                    'Connection': 'keep-alive'}
 
         try:
-            response, content = self.__webclient.request('http://www.wurzelimperium.de/dispatch.php', \
+            response, content = self.__webclient.request('https://www.wurzelimperium.de/dispatch.php', \
                                                          'POST', \
                                                          parameter, \
                                                          headers)
@@ -754,7 +754,7 @@ class HTTPConnection(object):
             self.__checkIfHTTPStateIsOK(response)
             reToken = re.search(r'ajax\.setToken\(\"(.*)\"\);', content)
             self.__token = reToken.group(1) #TODO: except, wenn token nicht aktualisiert werden kann
-            reProducts = re.search(r'data_products = ({.*})', content)
+            reProducts = re.search(r'data_products = ({.*}});var', content)
         except:
             raise
         else:

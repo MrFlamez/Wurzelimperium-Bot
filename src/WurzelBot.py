@@ -82,7 +82,7 @@ class WurzelBot(object):
         except:
             self.__logBot.error('Problem beim Starten des Wurzelbots.')
             return
-        
+
         try:
             self.spieler.setUserNameFromServer(self.__HTTPConn)
         except:
