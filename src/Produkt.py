@@ -20,6 +20,8 @@ class Product():
         self.__isPlantable = plantable
         self.__timeUntilHarvest = time
         self.__numberInStock = nInStock
+        self.__priceNPC = None
+        self.__priceCurrent = None
         
     def getID(self):
         return self.__id
@@ -42,10 +44,17 @@ class Product():
     def setNumberInStock(self, nmbr):
         self.__numberInStock = nmbr
         
+    def setPriceNPC(self, price):
+        self.__priceNPC = price
+        
+    def setPriceCurrent(self, price):
+        self.__priceCurrent = price
+        
     def printAll(self):
         print 'ID: ', str(self.__id).ljust(5), \
               'CAT: ', str(self.__category).ljust(8), ' ', \
               'Name: ', str(self.__name).ljust(50), ' ', \
+              'NPC: ', str(self.__priceNPC).ljust(10), ' ', \
               'Lager: ', str(self.__numberInStock).ljust(8), ' ', \
               'SX: ', str(self.__sx).ljust(4), ' ', \
               'SY: ', str(self.__sy).ljust(4)

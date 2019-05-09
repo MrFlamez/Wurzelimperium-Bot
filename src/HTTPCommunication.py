@@ -10,7 +10,8 @@ from urllib import urlencode
 import json, re, httplib2
 from Cookie import SimpleCookie
 from src.Session import Session
-import yaml, time, logging, math
+import yaml, time, logging, math, io
+import xml.etree.ElementTree as eTree
 
 
 #Defines
@@ -269,6 +270,49 @@ class HTTPConnection(object):
             raise
         else:
             pass
+
+
+    def __parseNPCPricesFromHtml(self, html):
+        """
+        Parsen aller NPC Preise aus dem HTML Skript der Spielehilfe.
+        """
+        #ElementTree benötigt eine Datei zum Parsen.
+        #Mit BytesIO wird eine Datei im Speicher angelegt, nicht auf der Festplatte.
+        html_file = io.BytesIO(html)
+        
+        html_tree = eTree.parse(html_file)
+        root = html_tree.getroot()
+        table = root.find('./body/div[@id="content"]/table')
+        
+        dictResult = {}
+        
+        for row in table.iter('tr'):
+            
+            produktname = row[0].text
+            npc_preis = row[1].text
+            
+            #Bei der Tabellenüberschrift ist der Text None
+            if produktname != None and npc_preis != None:
+                
+                #Produktname aufbereiten
+                if type(produktname) == unicode:
+                    produktname = produktname.encode('utf-8')
+                    produktname = str(produktname)
+                
+                #NPC-Preis aufbereiten
+                npc_preis = str(npc_preis)
+                npc_preis = npc_preis.replace(' wT', '')
+                npc_preis = npc_preis.replace('.', '')
+                npc_preis = npc_preis.replace(',', '.')
+                npc_preis = npc_preis.strip()
+                if '-' in npc_preis:
+                    npc_preis = None
+                else:
+                    npc_preis = float(npc_preis)
+                    
+                dictResult[produktname] = npc_preis
+                
+        return dictResult
 
     def logIn(self, loginDaten):
         """
@@ -779,6 +823,28 @@ class HTTPConnection(object):
             pass
         else:
             return jContent['produkte']
+        
+        
+    def getNPCPrices(self):
+        """
+        Ermittelt aus der Wurzelimperium-Hilfe die NPC Preise aller Produkte.
+        """
+        
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                    'Content-Length':'0'}
+        
+        adresse = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/hilfe.php?item=2'
+        try:
+            response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+            self.__checkIfHTTPStateIsOK(response)
+            dictNPCPrices = self.__parseNPCPricesFromHtml(content)
+        except:
+            pass #TODO Exception definieren
+        else:
+            return dictNPCPrices
+        
+
 
 class HTTPStateError(Exception):
     def __init__(self, value):

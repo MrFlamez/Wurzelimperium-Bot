@@ -24,7 +24,14 @@ class Storage():
         """
         Ermittelt alle möglichen NPC Preise und setzt diese in den Produkten.
         """
-        pass
+        
+        dNPC = self.__httpConn.getNPCPrices()
+        dNPCKeys = dNPC.keys()
+        
+        for product in self.__products:
+            productname = product.getName()
+            if productname in dNPCKeys:
+                product.setPriceNPC(dNPC[productname])
     
     def getProductByID(self, id):
         for product in self.__products:
@@ -65,6 +72,7 @@ class Storage():
                                                time      = dictProducts[key]['time'], \
                                                nInStock  = 0))
                 
+        self.__setAllPricesOfNPC()
         self.updateNumberInStock()
     
     def updateNumberInStock(self):
