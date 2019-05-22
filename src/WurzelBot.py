@@ -11,6 +11,7 @@ from src.HTTPCommunication import HTTPConnection
 from src.Messenger import Messenger
 from src.Garten import Garden
 from src.Lager import Storage
+from src.Marktplatz import Marketplace
 import logging
 
 
@@ -30,6 +31,7 @@ class WurzelBot(object):
         self.messenger = Messenger(self.__HTTPConn)
         self.storage = Storage(self.__HTTPConn)
         self.garten = []
+        self.marktplatz = Marketplace(self.__HTTPConn)
 
 
     def __initGardens(self):
@@ -222,7 +224,7 @@ class WurzelBot(object):
     def test(self):
         #TODO: Für Testzwecke, kann später entfernt werden.
         #return self.__HTTPConn.getUsrList(1, 15000)
-        #self.__HTTPConn.readStorageFromServer()
+        print self.marktplatz.getCheapestOffer(1)
         pass
 
 

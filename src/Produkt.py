@@ -21,7 +21,7 @@ class Product():
         self.__timeUntilHarvest = time
         self.__numberInStock = nInStock
         self.__priceNPC = None
-        self.__priceCurrent = None
+
         
     def getID(self):
         return self.__id
@@ -46,9 +46,6 @@ class Product():
         
     def setPriceNPC(self, price):
         self.__priceNPC = price
-        
-    def setPriceCurrent(self, price):
-        self.__priceCurrent = price
         
     def printAll(self):
         print 'ID: ', str(self.__id).ljust(5), \
