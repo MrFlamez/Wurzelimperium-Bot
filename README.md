@@ -9,10 +9,10 @@ Features:
 - vollautomatische Bewässerung aller Gärten inkl. Wassergarten
 - Versenden von erstellten Standardnachrichten an eine Liste von Empfängern
 - automatisiertes Anpflanzen
+- Abfrage aller aktuellen Marktpreise (Keine Abhängigkeit von Preislistenpflegern und deren Aktualisierungsintervall!)
 
 Geplante Features:
 - automatisiertes Anpflanzen im Wassergarten
-- Abfrage aller aktuellen Marktpreise (Keine Abhängigkeit von Preislistenpflegern und deren Aktualisierungsintervall!)
 - Bewertung der aktuellen Marktpreise hinsichtlich NPC-Preise
 - Erfassung aller Wimps
 - Bewertung der Wimpangebote in Bezug auf aktuelle Marktpreise
