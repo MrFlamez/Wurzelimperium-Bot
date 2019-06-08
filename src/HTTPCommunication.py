@@ -896,7 +896,7 @@ class HTTPConnection(object):
                 pass #TODO: exception definieren
             else:
                 html_file = io.BytesIO(content)
-                html_tree =html.parse(html_file)
+                html_tree = html.parse(html_file)
                 root = html_tree.getroot()
                 table = root.findall('./body/div/table/*')
                 

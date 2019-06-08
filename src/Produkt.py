@@ -9,7 +9,7 @@ Created on 23.01.2019
 
 class Product():
     
-    def __init__(self, id, cat, sx, sy, name, lvl, crop, plantable, time, nInStock):
+    def __init__(self, id, cat, sx, sy, name, lvl, crop, plantable, time):
         self.__id = id
         self.__category = cat
         self.__sx = sx
@@ -19,7 +19,6 @@ class Product():
         self.__crop = crop
         self.__isPlantable = plantable
         self.__timeUntilHarvest = time
-        self.__numberInStock = nInStock
         self.__priceNPC = None
 
         
@@ -28,9 +27,6 @@ class Product():
     
     def getName(self):
         return self.__name
-
-    def getNumberInStock(self):
-        return self.__numberInStock
     
     def getSX(self):
         return self.__sx
@@ -38,11 +34,11 @@ class Product():
     def getSY(self):
         return self.__sy
     
+    def getPriceNPC(self):
+        return self.__priceNPC
+    
     def isProductPlantable(self):
         return self.__isPlantable
-
-    def setNumberInStock(self, nmbr):
-        self.__numberInStock = nmbr
         
     def setPriceNPC(self, price):
         self.__priceNPC = price
@@ -52,7 +48,6 @@ class Product():
               'CAT: ', str(self.__category).ljust(8), ' ', \
               'Name: ', str(self.__name).ljust(50), ' ', \
               'NPC: ', str(self.__priceNPC).ljust(10), ' ', \
-              'Lager: ', str(self.__numberInStock).ljust(8), ' ', \
               'SX: ', str(self.__sx).ljust(4), ' ', \
               'SY: ', str(self.__sy).ljust(4)
 
