@@ -12,6 +12,7 @@ from src.Messenger import Messenger
 from src.Garten import Garden
 from src.Lager import Storage
 from src.Marktplatz import Marketplace
+from src.Produktdaten import ProductData
 import logging
 
 
@@ -27,6 +28,7 @@ class WurzelBot(object):
         self.__logBot = logging.getLogger("bot")
         self.__logBot.setLevel(logging.DEBUG)
         self.__HTTPConn = HTTPConnection()
+        self.productData = ProductData(self.__HTTPConn)
         self.spieler = Spieler()
         self.messenger = Messenger(self.__HTTPConn)
         self.storage = Storage(self.__HTTPConn)
@@ -117,7 +119,9 @@ class WurzelBot(object):
         
         self.spieler.accountLogin = loginDaten
         self.spieler.setUserID(self.__HTTPConn.getUserID())
-        self.storage.initAllProducts()
+        self.productData.initAllProducts()
+        self.storage.initProductList(self.productData.getListOfAllProductIDs())
+        self.storage.updateNumberInStock()
 
 
     def exitBot(self):
@@ -215,17 +219,23 @@ class WurzelBot(object):
         """
         Pflanzt so viele Pflanzen von einer Sorte wie möglich über alle Gärten hinweg an.
         """
-        product = self.storage.getProductByName(productName)
+        product = self.productData.getProductByName(productName)
         if (product.isProductPlantable()):
             for garden in self.garten:
                 garden.growPlant(product.getID(), product.getSX(), product.getSY())
-            
+
 
     def test(self):
         #TODO: Für Testzwecke, kann später entfernt werden.
         #return self.__HTTPConn.getUsrList(1, 15000)
-        print self.marktplatz.getCheapestOffer(1)
-        pass
+        tradeableProducts = self.marktplatz.getAllTradableProducts()
+        for id in tradeableProducts:
+            product = self.productData.getProductByID(id)
+            print product.getName()
+            gaps = self.marktplatz.findBigGapInProductOffers(product.getID(), product.getPriceNPC())
+            if len(gaps) > 0:
+                print gaps
+            print ''
 
 
 

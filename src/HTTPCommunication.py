@@ -698,20 +698,20 @@ class HTTPConnection(object):
                         userList['Punkte'].append(int(str(result.group(4).replace('.', ''))))
                 except:
                     raise
-            
+
             iStartCorr = iStartCorr + 100
-        
+
         return userList
 
     def readStorageFromServer(self):
-        
+
         headers = {'User-Agent': self.__userAgent,\
                    'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
                              'wunr=' + self.__userID}
-        
+
         adress = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/ajax/updatelager.' + \
                  'php?all=1'
-        
+
         try:
             response, content = self.__webclient.request(adress, 'GET', headers = headers)
             self.__checkIfHTTPStateIsOK(response)
@@ -720,7 +720,7 @@ class HTTPConnection(object):
             raise
         else:
             print jContent['produkte']
-            
+
     def getEmptyFieldsOfGarden(self, gardenID):
         """
         Gibt alle leeren Felder eines Gartens zurück.
@@ -756,7 +756,7 @@ class HTTPConnection(object):
         try:
             self.__changeGarden(gardenID)
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
-        #TODO: Response auf HTTP Fehler prüfen?
+        # TODO: Response auf HTTP Fehler prüfen?
         except:
             raise
         else:
@@ -825,17 +825,17 @@ class HTTPConnection(object):
             pass
         else:
             return jContent['produkte']
-        
-        
+
+
     def getNPCPrices(self):
         """
         Ermittelt aus der Wurzelimperium-Hilfe die NPC Preise aller Produkte.
         """
-        
+
         headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
                              'wunr=' + self.__userID,
                     'Content-Length':'0'}
-        
+
         adresse = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/hilfe.php?item=2'
 
         try:
