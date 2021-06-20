@@ -162,7 +162,8 @@ class WurzelBot(object):
             garden.waterPlants()
         
         if self.spieler.isAquaGardenAvailable():
-            self.waterPlantsInAquaGarden()
+            pass
+            #self.waterPlantsInAquaGarden()
 
 
     def writeMessagesIfMailIsConfirmed(self, recipients, subject, body):
