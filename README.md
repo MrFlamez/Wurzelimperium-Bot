@@ -18,3 +18,10 @@ Geplante Features:
 - Bewertung der Wimpangebote in Bezug auf aktuelle Marktpreise
 - Wegschicken aller Wimps mit schlechtem Angebot (siehe vorherigen Punkt)
 - Bedienung der Wimps nach Wahl
+
+
+# Installation
+
+Voraussetzung: Python 2.7
+
+Klonen des Repositorys von GitHub. Wichtig ist dabei der src Ordner und die Datei example.py. Anschließend kann die example.py ausgeführt werden. In ihr können dann auch die Tätigkeiten des Bots definiert werden.
