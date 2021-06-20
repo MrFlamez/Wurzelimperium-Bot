@@ -1,0 +1,22 @@
+test Funktion im Wurzelbot in Sinnvolle Funktionen packen
+
+- Wassergarten anpflanzbar machen
+
+
+- Bewertung der Marktpreise im Wurzelbot
+- regex gruppen benennen (P>name) oder so ähnlich
+- regex erschöpfende suche einschränken .*? oder so ähnlich
+
+- Bewertung der aktuellen Marktpreise hinsichtlich NPC-Preise
+- Erfassung aller Wimps
+- Bewertung der Wimpangebote in Bezug auf aktuelle Marktpreise
+- Wegschicken aller Wimps mit schlechtem Angebot (siehe vorherigen Punkt)
+- Bedienung der Wimps nach Wahl
+
+
+
+update Funktion:
+
+- Userdaten
+- Lagerbestand
+- Handelbare Produkte

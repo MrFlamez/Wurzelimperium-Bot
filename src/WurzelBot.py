@@ -9,7 +9,7 @@ Created on 21.03.2017
 from src.Spieler import Spieler, Login
 from src.HTTPCommunication import HTTPConnection
 from src.Messenger import Messenger
-from src.Garten import Garden
+from src.Garten import Garden, AquaGarden
 from src.Lager import Storage
 from src.Marktplatz import Marketplace
 from src.Produktdaten import ProductData
@@ -33,6 +33,7 @@ class WurzelBot(object):
         self.messenger = Messenger(self.__HTTPConn)
         self.storage = Storage(self.__HTTPConn)
         self.garten = []
+        self.wassergarten = None
         self.marktplatz = Marketplace(self.__HTTPConn)
 
 
@@ -45,6 +46,10 @@ class WurzelBot(object):
             self.spieler.numberOfGardens = tmpNumberOfGardens
             for i in range(1, tmpNumberOfGardens + 1):
                 self.garten.append(Garden(self.__HTTPConn, i))
+            
+            if self.spieler.isAquaGardenAvailable() is True:
+                self.wassergarten = AquaGarden(self.__HTTPConn)
+
         except:
             raise
 
@@ -97,11 +102,6 @@ class WurzelBot(object):
             self.spieler.setUserDataFromServer(self.__HTTPConn)
         except:
             self.__logBot.error('UserDaten konnten nicht aktualisiert werden')
-
-        try:
-            self.__initGardens()
-        except:
-            self.__logBot.error('Anzahl der Gärten konnte nicht ermittelt werden.')
         
         try:
             tmpHoneyFarmAvailability = self.__HTTPConn.isHoneyFarmAvailable(self.spieler.getLevelNr())
@@ -116,7 +116,12 @@ class WurzelBot(object):
             self.__logBot.error('Verfügbarkeit des Wassergartens konnte nicht ermittelt werden.')
         else:
             self.spieler.setAquaGardenAvailability(tmpAquaGardenAvailability)
-        
+
+        try:
+            self.__initGardens()
+        except:
+            self.__logBot.error('Anzahl der Gärten konnte nicht ermittelt werden.')
+ 
         self.spieler.accountLogin = loginDaten
         self.spieler.setUserID(self.__HTTPConn.getUserID())
         self.productData.initAllProducts()
@@ -149,30 +154,15 @@ class WurzelBot(object):
             self.spieler.userData = userData
 
 
-    def waterPlantsInAquaGarden(self):
-        """
-        Alle Pflanzen im Wassergarten werden bewässert.
-        """
-        if self.spieler.isAquaGardenAvailable() == True:
-            try:
-                plants = self.__HTTPConn.getPlantsToWaterInAquaGarden()
-                nPlants = len(plants['fieldID'])
-                for i in range(0, nPlants):
-                    sFields = self.__getAllFieldIDsFromFieldIDAndSizeAsString(plants['fieldID'][i], plants['sx'][i], plants['sy'][i])
-                    self.__HTTPConn.waterPlantInAquaGarden(plants['fieldID'][i], sFields)
-            except:
-                self.__logBot.error('Wassergarten konnte nicht bewässert werden.')
-            else:
-                self.__logBot.info('Im Wassergarten wurden ' + str(nPlants) + ' Pflanzen gegossen.')
-
-
     def waterPlantsInAllGardens(self):
         """
         Alle Gärten des Spielers werden komplett bewässert.
         """
         for garden in self.garten:
             garden.waterPlants()
-        self.waterPlantsInAquaGarden()
+        
+        if self.spieler.isAquaGardenAvailable():
+            self.waterPlantsInAquaGarden()
 
 
     def writeMessagesIfMailIsConfirmed(self, recipients, subject, body):
@@ -190,15 +180,15 @@ class WurzelBot(object):
                 pass
 
         
-    def getEmptyFieldsOfAllGardens(self):
+    def getEmptyFieldsOfGardens(self):
         """
-        Gibt alle leeren Felder aller Gärten zurück.
+        Gibt alle leeren Felder aller normalen Gärten zurück.
+        Kann dazu verwendet werden zu entscheiden, wie viele Pflanzen angebaut werden können.
         """
-        #TODO: Wassergarten ergänzen
         emptyFields = []
         try:
             for garden in self.garten:
-                emptyFields.append(Garden.getEmptyFields())
+                emptyFields.append(garden.getEmptyFields())
         except:
             self.__logBot.error('Konnte leere Felder von Garten ' + str(garden.getID()) + ' nicht ermitteln.')
         else:
@@ -209,6 +199,10 @@ class WurzelBot(object):
         try:
             for garden in self.garten:
                 garden.harvest()
+                
+            if self.spieler.isAquaGardenAvailable():
+                pass#self.waterPlantsInAquaGarden()
+
         except:
             self.__logBot.error('Konnte nicht alle Gärten ernten.')
         else:
@@ -228,6 +222,7 @@ class WurzelBot(object):
     def test(self):
         #TODO: Für Testzwecke, kann später entfernt werden.
         #return self.__HTTPConn.getUsrList(1, 15000)
+        """
         tradeableProducts = self.marktplatz.getAllTradableProducts()
         for id in tradeableProducts:
             product = self.productData.getProductByID(id)
@@ -236,9 +231,8 @@ class WurzelBot(object):
             if len(gaps) > 0:
                 print gaps
             print ''
-
-
-
-
+        """
+        #self.__HTTPConn.growPlantInAquaGarden(162, 9)
+        self.wassergarten.waterPlants()
 
 

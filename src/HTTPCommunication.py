@@ -120,7 +120,7 @@ class HTTPConnection(object):
         Ermittelt aus einer übergebenen URL den security token.
         """
         #token extrahieren
-        split = re.search(r'http://.*/logw.php.*token=([a-f0-9]{32})', url)
+        split = re.search(r'https://.*/logw.php.*token=([a-f0-9]{32})', url)
         iErr = 0
         if split:
             tmpToken = split.group(1)
@@ -761,7 +761,26 @@ class HTTPConnection(object):
             raise
         else:
             pass
-        
+
+    def harvestAquaGarden(self):
+        """
+        Erntet alle fertigen Pflanzen im Garten.
+        """
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                   'Connection': 'Keep-Alive'}
+    
+        adresse = 'http://s' + str(self.__Session.getServer()) + \
+                  '.wurzelimperium.de/ajax/ajax.php?do=watergardenHarvestAll&token=' + self.__token
+
+        try:
+            response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+            self.__checkIfHTTPStateIsOK(response)
+        except:
+            raise
+        else:
+            pass
+
     def growPlant(self, field, plant, gardenID, fields):
         """
         Baut eine Pflanze auf einem Feld an.
@@ -784,7 +803,30 @@ class HTTPConnection(object):
             raise
         else:
             pass
-        
+    
+    
+    def growPlantInAquaGarden(self, plant, field):
+        """
+        Baut eine Pflanze im Wassergarten an.
+        """
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                   'Connection': 'Keep-Alive'}
+    
+        adresse = 'http://s' + str(self.__Session.getServer()) + \
+                  '.wurzelimperium.de/ajax/ajax.php?do=watergardenCache&' + \
+                  'plant[' + str(field) + ']=' + str(plant) + \
+                  '&token=' + self.__token
+    
+        try:
+            response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+            print response
+            print content
+        except:
+            print 'except'
+            raise
+        else:
+            pass    
     def getAllProductInformations(self):
         """
         Sammelt alle Produktinformationen und gibt diese zur Weiterverarbeitung zurück.
@@ -838,14 +880,15 @@ class HTTPConnection(object):
 
         adresse = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/hilfe.php?item=2'
 
-        try:
-            response, content = self.__webclient.request(adresse, 'GET', headers = headers)
-            self.__checkIfHTTPStateIsOK(response)
-            dictNPCPrices = self.__parseNPCPricesFromHtml(content)
-        except:
-            pass #TODO Exception definieren
-        else:
-            return dictNPCPrices
+        #try:
+        response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+        self.__checkIfHTTPStateIsOK(response)
+        content = content.replace('&', 'und')
+        dictNPCPrices = self.__parseNPCPricesFromHtml(content)
+        #except:
+        #    pass #TODO Exception definieren
+        #else:
+        return dictNPCPrices
         
 
     def getAllTradeableProductsFromOverview(self):

@@ -5,32 +5,44 @@ import logging
 
 class Garden():
     
-    __lenX = 17
-    __lenY = 12
-    __nMaxFields = __lenX * __lenY
+    _lenX = 17
+    _lenY = 12
+    _nMaxFields = _lenX * _lenY
     
     def __init__(self, httpConnection, gardenID):
-        self.__httpConn = httpConnection
-        self.__id = gardenID
-        self.__logGarden = logging.getLogger('bot.Garden_' + str(gardenID))
-        self.__logGarden.setLevel(logging.DEBUG)
+        self._httpConn = httpConnection
+        self._id = gardenID
+        self._logGarden = logging.getLogger('bot.Garden_' + str(gardenID))
+        self._logGarden.setLevel(logging.DEBUG)
 
-    def __getAllFieldIDsFromFieldIDAndSizeAsString(self, fieldID, sx, sy):
+    def _getAllFieldIDsFromFieldIDAndSizeAsString(self, fieldID, sx, sy):
         """
         Rechnet anhand der fieldID und Größe der Pflanze (sx, sy) alle IDs aus und gibt diese als String zurück.
         """
+        
+        # Zurückgegebene Felderindizes (x) für Pflanzen der Größe 1-, 2- und 4-Felder.
+        # Wichtig beim Gießen; dort müssen alle Indizes angegeben werden.
+        # (Sowohl die mit x als auch die mit o gekennzeichneten).
+        # x: fieldID
+        # o: ergänzte Felder anhand der size
+        # +---+   +---+---+   +---+---+
+        # | x |   | x | o |   | x | o |
+        # +---+   +---+---+   +---+---+
+        #                     | o | o |
+        #                     +---+---+
+        
         if (sx == 1 and sy == 1): return str(fieldID)
         if (sx == 2 and sy == 1): return str(fieldID) + ',' + str(fieldID + 1)
         if (sx == 1 and sy == 2): return str(fieldID) + ',' + str(fieldID + 17)
         if (sx == 2 and sy == 2): return str(fieldID) + ',' + str(fieldID + 1) + ',' + str(fieldID + 17) + ',' + str(fieldID + 18)
-        self.__logGarden.debug('Error der plantSize --> sx: ' + str(sx) + ' sy: ' + str(sy))
+        self._logGarden.debug('Error der plantSize --> sx: ' + str(sx) + ' sy: ' + str(sy))
 
 
-    def __getAllFieldIDsFromFieldIDAndSizeAsIntList(self, fieldID, sx, sy):
+    def _getAllFieldIDsFromFieldIDAndSizeAsIntList(self, fieldID, sx, sy):
         """
         Rechnet anhand der fieldID und Größe der Pflanze (sx, sy) alle IDs aus und gibt diese als Integer-Liste zurück.
         """
-        sFields = self.__getAllFieldIDsFromFieldIDAndSizeAsString(fieldID, sx, sy)
+        sFields = self._getAllFieldIDsFromFieldIDAndSizeAsString(fieldID, sx, sy)
         listFields = sFields.split(',') #Stringarray
                         
         for i in range(0, len(listFields)):
@@ -38,19 +50,24 @@ class Garden():
             
         return listFields
     
-    def __isPlantGrowableOnField(self, fieldID, emptyFields, fieldsToPlant, sx):
+    def _isPlantGrowableOnField(self, fieldID, emptyFields, fieldsToPlant, sx):
         """
         Prüft anhand mehrerer Kriterien, ob ein Anpflanzen möglich ist.
         """
-        #Feld darf nicht besetzt sein
+        #Betrachtetes Feld darf nicht besetzt sein
         if not (fieldID in emptyFields): return False
         
-        #
-        if not ((self.__nMaxFields - fieldID)%self.__lenX >= sx - 1): return False
+        #Anpflanzen darf nicht außerhalb des Gartens erfolgen
+        #Dabei reicht die Betrachtung in x-Richtung, da hier ein
+        #"Zeilenumbruch" stattfindet. Die y-Richtung ist durch die
+        #Abfrage abgedeckt, ob alle benötigten Felder frei sind.
+        #Felder außerhalb (in y-Richtung) des Gartens sind nicht leer,
+        #da sie nicht existieren.
+        if not ((self._nMaxFields - fieldID)%self._lenX >= sx - 1): return False
         fieldsToPlantSet = set(fieldsToPlant)
         emptyFieldsSet = set(emptyFields)
         
-        #
+        #Alle benötigten Felder der Pflanze müssen leer sein
         if not (fieldsToPlantSet.issubset(emptyFieldsSet)): return False
         return True
 
@@ -64,36 +81,26 @@ class Garden():
         """
         Ein Garten mit der gardenID wird komplett bewässert.
         """
-        # Zurückgegebene Felderindizes (x) für Pflanzen der Größe 1-, 2- und 4-Felder.
-        # Wichtig beim Gießen; dort müssen alle Indizes angegeben werden.
-        # (Sowohl die mit x als auch die mit o gekennzeichneten).
-        # x: fieldID
-        # o: ergänzte Felder anhand der size
-        # +---+   +---+---+   +---+---+
-        # | x |   | x | o |   | x | o |
-        # +---+   +---+---+   +---+---+
-        #                     | o | o |
-        #                     +---+---+
-        self.__logGarden.info('Gieße alle Pflanzen im Garten ' + str(self.__id) + '.')
+        self._logGarden.info('Gieße alle Pflanzen im Garten ' + str(self._id) + '.')
         try:
-            plants = self.__httpConn.getPlantsToWaterInGarden(self.__id)
+            plants = self._httpConn.getPlantsToWaterInGarden(self._id)
             nPlants = len(plants['fieldID'])
             for i in range(0, nPlants):
-                sFields = self.__getAllFieldIDsFromFieldIDAndSizeAsString(plants['fieldID'][i], plants['sx'][i], plants['sy'][i])
-                self.__httpConn.waterPlantInGarden(self.__id, plants['fieldID'][i], sFields)
+                sFields = self._getAllFieldIDsFromFieldIDAndSizeAsString(plants['fieldID'][i], plants['sx'][i], plants['sy'][i])
+                self._httpConn.waterPlantInGarden(self._id, plants['fieldID'][i], sFields)
         except:
-            self.__logGarden.error('Garten ' + str(self.__id) + ' konnte nicht bewässert werden.')
+            self._logGarden.error('Garten ' + str(self._id) + ' konnte nicht bewässert werden.')
         else:
-            self.__logGarden.info('Im Garten ' + str(self.__id) + ' wurden ' + str(nPlants) + ' Pflanzen gegossen.')
+            self._logGarden.info('Im Garten ' + str(self._id) + ' wurden ' + str(nPlants) + ' Pflanzen gegossen.')
             
     def getEmptyFields(self):
         """
         Gibt alle leeren Felder des Gartens zurück.
         """
         try:
-            tmpEmptyFields = self.__httpConn.getEmptyFieldsOfGarden(self.__id)
+            tmpEmptyFields = self._httpConn.getEmptyFieldsOfGarden(self._id)
         except:
-            self.__logGarden.error('Konnte leere Felder von Garten ' + str(self.__id) + ' nicht ermitteln.')
+            self._logGarden.error('Konnte leere Felder von Garten ' + str(self._id) + ' nicht ermitteln.')
         else:
             return tmpEmptyFields
 
@@ -102,7 +109,7 @@ class Garden():
         Erntet alles im Garten.
         """
         try:
-            self.__httpConn.harvestGarden(self.__id)
+            self._httpConn.harvestGarden(self._id)
         except:
             raise
         else:
@@ -117,16 +124,49 @@ class Garden():
         
         emptyFields = self.getEmptyFields()
         
-        for field in range(1, self.__nMaxFields + 1):
+        for field in range(1, self._nMaxFields + 1):
             
-            fieldsToPlant = self.__getAllFieldIDsFromFieldIDAndSizeAsIntList(field, sx, sy)
+            fieldsToPlant = self._getAllFieldIDsFromFieldIDAndSizeAsIntList(field, sx, sy)
             
-            if (self.__isPlantGrowableOnField(field, emptyFields, fieldsToPlant, sx)):
-                fields = self.__getAllFieldIDsFromFieldIDAndSizeAsString(field, sx, sy)
-                self.__httpConn.growPlant(field, plantID, self.__id, fields)
+            if (self._isPlantGrowableOnField(field, emptyFields, fieldsToPlant, sx)):
+                fields = self._getAllFieldIDsFromFieldIDAndSizeAsString(field, sx, sy)
+                self._httpConn.growPlant(field, plantID, self._id, fields)
+                
+                #Nach dem Anbau belegte Felder aus der Liste der leeren Felder loeschen
                 fieldsToPlantSet = set(fieldsToPlant)
                 emptyFieldsSet = set(emptyFields)
                 tmpSet = emptyFieldsSet - fieldsToPlantSet
                 emptyFields = list(tmpSet)
 
 
+class AquaGarden(Garden):
+    
+    def __init__(self, httpConnection):
+        Garden.__init__(self, httpConnection, 101)
+
+
+    def waterPlants(self):
+        """
+        Alle Pflanzen im Wassergarten werden bewässert.
+        """
+        try:
+            plants = self._httpConn.getPlantsToWaterInAquaGarden()
+            nPlants = len(plants['fieldID'])
+            for i in range(0, nPlants):
+                sFields = self._getAllFieldIDsFromFieldIDAndSizeAsString(plants['fieldID'][i], plants['sx'][i], plants['sy'][i])
+                self._httpConn.waterPlantInAquaGarden(plants['fieldID'][i], sFields)
+        except:
+            self._logGarden.error('Wassergarten konnte nicht bewässert werden.')
+        else:
+            self._logGarden.info('Im Wassergarten wurden ' + str(nPlants) + ' Pflanzen gegossen.')
+        
+    def harvest(self):
+        """
+        Erntet alles im Wassergarten.
+        """
+        try:
+            self._httpConn.harvestAquaGarden()
+        except:
+            raise
+        else:
+            pass
