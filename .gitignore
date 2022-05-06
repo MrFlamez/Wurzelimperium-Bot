@@ -1,4 +1,5 @@
-
+# Python
 *.pyc
-*.log
-src/test.py
+
+# Log files
+.log

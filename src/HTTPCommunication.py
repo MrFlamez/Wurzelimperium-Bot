@@ -6,15 +6,13 @@ Created on 21.03.2017
 @author: MrFlamez
 '''
 
-from urllib import urlencode
+from urllib.parse import urlencode
 import json, re, httplib2
-from Cookie import SimpleCookie
+from http.cookies import SimpleCookie
 from src.Session import Session
 import yaml, time, logging, math, io
 import xml.etree.ElementTree as eTree
 from lxml import html
-
-
 
 #Defines
 HTTP_STATE_CONTINUE            = 100
@@ -89,7 +87,7 @@ class HTTPConnection(object):
         else: raise JSONError()
 
 
-    def __generateJSONContentAndCheckForOK(self, content):
+    def __generateJSONContentAndCheckForOK(self, content : str):
         """
         Aufbereitung und Prüfung der vom Server empfangenen JSON Daten.
         """
@@ -142,7 +140,7 @@ class HTTPConnection(object):
         """
         result = False
         for i in range(0, len(jContent['table'])):
-            sUserName = str(jContent['table'][i].encode('utf-8'))  
+            sUserName = str(jContent['table'][i])  
             if 'Spielername' in sUserName:
                 sUserName = sUserName.replace('<tr>', '')
                 sUserName = sUserName.replace('<td>', '')
@@ -166,7 +164,7 @@ class HTTPConnection(object):
         """
         result = False
         for i in range(0, len(jContent['table'])):
-            sGartenAnz = str(jContent['table'][i].encode('utf-8'))   
+            sGartenAnz = str(jContent['table'][i])   
             if 'Gärten' in sGartenAnz:
                 sGartenAnz = sGartenAnz.replace('<tr>', '')
                 sGartenAnz = sGartenAnz.replace('<td>', '')
@@ -230,13 +228,30 @@ class HTTPConnection(object):
 
         return emptyFields
 
-    def __generateYAMLContentAndCheckForSuccess(self, content):
+    def __findWeedFieldsFromJSONContent(self, jContent):
+        """
+        Sucht im JSON Content nach Felder die mit Unkraut befallen sind und gibt diese zurück.
+        """
+        weedFields = []
+        
+        # 41 Unkraut, 42 Baumstumpf, 43 Stein, 45 Maulwurf
+        for field in jContent['garden']:
+            if jContent['garden'][field][0] in [41, 42, 43, 45]:
+                weedFields.append(int(field))
+
+        #Sortierung über ein leeres Array ändert Objekttyp zu None
+        if len(weedFields) > 0:
+            weedFields.sort(reverse=False)
+
+        return weedFields
+
+    def __generateYAMLContentAndCheckForSuccess(self, content : str):
         """
         Aufbereitung und Prüfung der vom Server empfangenen YAML Daten auf Erfolg.
         """
         content = content.replace('\n', ' ')
         content = content.replace('\t', ' ')
-        yContent = yaml.load(content)
+        yContent = yaml.load(content, Loader=yaml.FullLoader)
         
         if (yContent['success'] != 1):
             raise YAMLError()
@@ -248,7 +263,7 @@ class HTTPConnection(object):
         """
         content = content.replace('\n', ' ')
         content = content.replace('\t', ' ')
-        yContent = yaml.load(content)
+        yContent = yaml.load(content, Loader=yaml.FullLoader)
         
         if (yContent['status'] != 'ok'):
             raise YAMLError()
@@ -295,13 +310,7 @@ class HTTPConnection(object):
             
             #Bei der Tabellenüberschrift ist der Text None
             if produktname != None and npc_preis != None:
-                
-                #Produktname aufbereiten
-                if type(produktname) == unicode:
-                    produktname = produktname.encode('utf-8')
-                    produktname = str(produktname)
-                
-                #NPC-Preis aufbereiten
+                # NPC-Preis aufbereiten
                 npc_preis = str(npc_preis)
                 npc_preis = npc_preis.replace(' wT', '')
                 npc_preis = npc_preis.replace('.', '')
@@ -342,6 +351,7 @@ class HTTPConnection(object):
             raise
         else:
             cookie = SimpleCookie(response['set-cookie'])
+            cookie.load(str(response["set-cookie"]).replace("secure, ", "", -1))
             self.__Session.openSession(cookie['PHPSESSID'].value, str(loginDaten.server))
             self.__cookie = cookie
             self.__userID = cookie['wunr'].value
@@ -387,7 +397,7 @@ class HTTPConnection(object):
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
             self.__checkIfHTTPStateIsOK(response)
-            jContent = self.__generateJSONContentAndCheckForOK(content)
+            jContent = self.__generateJSONContentAndCheckForOK(content.decode('UTF-8'))
             iNumber = self.__getNumberOfGardensFromJSONContent(jContent)
         except:
             raise
@@ -475,7 +485,7 @@ class HTTPConnection(object):
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
             self.__checkIfHTTPStateIsOK(response)
-            self.__generateYAMLContentAndCheckForSuccess(content)
+            self.__generateYAMLContentAndCheckForSuccess(content.decode('UTF-8'))
         except:
             raise
 
@@ -678,9 +688,9 @@ class HTTPConnection(object):
         
         headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
                              'wunr=' + self.__userID}
-        print iCalls
+        print(iCalls)
         for i in range(iCalls):
-            print i
+            print(i)
             adress = 'http://s' + str(self.__Session.getServer()) + '.wurzelimperium.de/ajax/ajax.php?do=statsGetStats&which=1&start='+str(iStartCorr)+'&showMe=0&additional=0&token=' + self.__token
             try:
                 response, content = self.__webclient.request(adress, 'GET', headers = headers)
@@ -719,7 +729,7 @@ class HTTPConnection(object):
         except:
             raise
         else:
-            print jContent['produkte']
+            print(jContent['produkte'])
 
     def getEmptyFieldsOfGarden(self, gardenID):
         """
@@ -742,6 +752,27 @@ class HTTPConnection(object):
         else:
             return emptyFields
 
+    def getWeedFieldsOfGarden(self, gardenID):
+        """
+        Gibt alle leeren Felder eines Gartens zurück.
+        """
+        headers = {'Cookie': 'PHPSESSID=' + self.__Session.getSessionID() + '; ' + \
+                             'wunr=' + self.__userID,
+                   'Connection': 'Keep-Alive'}
+        adresse = 'http://s' + str(self.__Session.getServer()) + \
+                  '.wurzelimperium.de/ajax/ajax.php?do=changeGarden&garden=' + \
+                  str(gardenID) + '&token=' + self.__token
+
+        try:
+            response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+            self.__checkIfHTTPStateIsOK(response)
+            jContent = self.__generateJSONContentAndCheckForOK(content)
+            weedFields = self.__findWeedFieldsFromJSONContent(jContent)
+        except:
+            raise
+        else:
+            return weedFields
+
     def harvestGarden(self, gardenID):
         """
         Erntet alle fertigen Pflanzen im Garten.
@@ -756,7 +787,17 @@ class HTTPConnection(object):
         try:
             self.__changeGarden(gardenID)
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
-        # TODO: Response auf HTTP Fehler prüfen?
+            jContent = json.loads(content)
+            #print(content.decode('UTF-8'))
+
+            if jContent['status'] == 'error':
+                print(jContent['message'])
+                self.__logHTTPConn.info(jContent['message'])
+            elif jContent['status'] == 'ok':
+                msg = jContent['harvestMsg'].replace('<div>', '').replace('</div>', '\n').replace('&nbsp;', ' ')
+                msg = msg.strip()
+                print(msg)
+                self.__logHTTPConn.info(msg)
         except:
             raise
         else:
@@ -799,7 +840,7 @@ class HTTPConnection(object):
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
         except:
-            print 'except'
+            print('except')
             raise
         else:
             pass
@@ -820,10 +861,10 @@ class HTTPConnection(object):
     
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
-            print response
-            print content
+            print(response)
+            print(content)
         except:
-            print 'except'
+            print('except')
             raise
         else:
             pass    
@@ -839,6 +880,7 @@ class HTTPConnection(object):
 
         try:
             response, content = self.__webclient.request(adresse, 'GET', headers = headers)
+            content = content.decode('UTF-8')
             self.__checkIfHTTPStateIsOK(response)
             reToken = re.search(r'ajax\.setToken\(\"(.*)\"\);', content)
             self.__token = reToken.group(1) #TODO: except, wenn token nicht aktualisiert werden kann
@@ -883,7 +925,10 @@ class HTTPConnection(object):
         #try:
         response, content = self.__webclient.request(adresse, 'GET', headers = headers)
         self.__checkIfHTTPStateIsOK(response)
-        content = content.replace('&', 'und')
+        
+        content = content.decode('UTF-8').replace('Gärten & Regale', 'Gärten und Regale')
+        content = bytearray(content, encoding='UTF-8')
+
         dictNPCPrices = self.__parseNPCPricesFromHtml(content)
         #except:
         #    pass #TODO Exception definieren

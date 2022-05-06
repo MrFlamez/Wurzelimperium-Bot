@@ -83,6 +83,7 @@ class WurzelBot(object):
         Diese Methode startet und initialisiert den Wurzelbot. Dazu wird ein Login mit den
         übergebenen Logindaten durchgeführt und alles nötige initialisiert.
         """
+        self.__logBot.info('-------------------------------------------')
         self.__logBot.info('Starte Wurzelbot')
         loginDaten = Login(server=server, user=user, password=pw)
 
@@ -180,7 +181,6 @@ class WurzelBot(object):
             else:
                 pass
 
-        
     def getEmptyFieldsOfGardens(self):
         """
         Gibt alle leeren Felder aller normalen Gärten zurück.
@@ -194,6 +194,30 @@ class WurzelBot(object):
             self.__logBot.error('Konnte leere Felder von Garten ' + str(garden.getID()) + ' nicht ermitteln.')
         else:
             pass
+        return emptyFields
+
+    def hasEmptyFields(self):
+        emptyFields = self.getEmptyFieldsOfGardens()
+        amount = 0
+        for garden in emptyFields:
+            amount += len(garden)
+
+        return amount > 0
+
+    def getWeedFieldsOfGardens(self):
+        """
+        Gibt alle Unkrau-Felder aller normalen Gärten zurück.
+        """
+        weedFields = []
+        try:
+            for garden in self.garten:
+                weedFields.append(garden.getWeedFields())
+        except:
+            self.__logBot.error('Konnte Unkraut-Felder von Garten ' + str(garden.getID()) + ' nicht ermitteln.')
+        else:
+            pass
+
+        return weedFields
         
     def harvestAllGarden(self):
         #TODO: Wassergarten ergänzen
@@ -204,21 +228,92 @@ class WurzelBot(object):
             if self.spieler.isAquaGardenAvailable():
                 pass#self.waterPlantsInAquaGarden()
 
+            self.storage.updateNumberInStock()
         except:
             self.__logBot.error('Konnte nicht alle Gärten ernten.')
         else:
+            self.__logBot.info('Konnte alle Gärten ernten.')
             pass
 
 
-    def growPlantsInGardens(self, productName):
+    def growPlantsInGardens(self, productName, amount=-1):
         """
         Pflanzt so viele Pflanzen von einer Sorte wie möglich über alle Gärten hinweg an.
         """
-        product = self.productData.getProductByName(productName)
-        if (product.isProductPlantable()):
-            for garden in self.garten:
-                garden.growPlant(product.getID(), product.getSX(), product.getSY())
+        planted = 0
 
+        product = self.productData.getProductByName(productName)
+
+        if product is None:
+            logMsg = 'Pflanze "' + productName + '" nicht gefunden'
+            self.__logBot.error(logMsg)
+            print(logMsg)
+            return -1
+
+        if not product.isPlant() or not product.isPlantable():
+            logMsg = '"' + productName + '" kann nicht angepflanzt werden'
+            self.__logBot.error(logMsg)
+            print(logMsg)
+            return -1
+
+        for garden in self.garten:
+            if amount == -1 or amount > self.storage.getStockByProductID(product.getID()):
+                amount = self.storage.getStockByProductID(product.getID())
+            planted += garden.growPlant(product.getID(), product.getSX(), product.getSY(), amount)
+        
+        self.storage.updateNumberInStock()
+
+        return planted
+
+    def printStock(self):
+        isSmthPrinted = False
+        for productID in self.storage.getKeys():
+            product = self.productData.getProductByID(productID)
+            
+            amount = self.storage.getStockByProductID(productID)
+            if amount == 0: continue
+            
+            print(str(product.getName()).ljust(30) + 'Amount: ' + str(amount).rjust(5))
+            isSmthPrinted = True
+    
+        if not isSmthPrinted:
+            print('Your stock is empty')
+
+    def getLowestStockEntry(self):
+        entryID = self.storage.getLowestStockEntry()
+        if entryID == -1: return 'Your stock is empty'
+        return self.productData.getProductByID(entryID).getName()
+
+    def getOrderedStockList(self):
+        orderedList = ''
+        for productID in self.storage.getOrderedStockList():
+            orderedList += str(self.productData.getProductByID(productID).getName()).ljust(20)
+            orderedList += str(self.storage.getOrderedStockList()[productID]).rjust(5)
+            orderedList += str('\n')
+        return orderedList.strip()
+    
+    def getLowestPlantStockEntry(self):
+        lowestStock = -1
+        lowestProductId = -1
+        for productID in self.storage.getOrderedStockList():
+            if not self.productData.getProductByID(productID).isPlant() or \
+                not self.productData.getProductByID(productID).isPlantable():
+                continue
+
+            currentStock = self.storage.getStockByProductID(productID)
+            if lowestStock == -1 or currentStock < lowestStock:
+                lowestStock = currentStock
+                lowestProductId = productID
+                continue
+
+        if lowestProductId == -1: return 'Your stock is empty'
+        return self.productData.getProductByID(lowestProductId).getName()
+
+    def printProductDetails(self):
+        self.productData.printAll()
+    
+    def printPlantDetails(self):
+        self.productData.printAllPlants()
 
     def test(self):
         #TODO: Für Testzwecke, kann später entfernt werden.

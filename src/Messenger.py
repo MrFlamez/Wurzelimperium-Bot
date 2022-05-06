@@ -7,7 +7,6 @@ Created on 24.10.2018
 
 from collections import namedtuple
 import re
-from types import ListType
 
 # Message States
 MSG_STATE_UNKNOWN = 1
@@ -216,11 +215,11 @@ class Messenger():
                 tmp_Msg = Message(sender, recipient, subject, body, messageDeliveryState)
                 self.__sent.append(tmp_Msg)
             except:
-                print 'Exception ' + recipient
+                print('Exception ' + recipient)
                 raise
             else:
                 i += 1
-                print str(i) + ' von ' + str(n)
+                print(str(i) + ' von ' + str(n))
 
 
 class MessengerError(Exception):

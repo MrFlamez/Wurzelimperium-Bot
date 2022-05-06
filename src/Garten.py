@@ -37,7 +37,6 @@ class Garden():
         if (sx == 2 and sy == 2): return str(fieldID) + ',' + str(fieldID + 1) + ',' + str(fieldID + 17) + ',' + str(fieldID + 18)
         self._logGarden.debug('Error der plantSize --> sx: ' + str(sx) + ' sy: ' + str(sy))
 
-
     def _getAllFieldIDsFromFieldIDAndSizeAsIntList(self, fieldID, sx, sy):
         """
         Rechnet anhand der fieldID und Größe der Pflanze (sx, sy) alle IDs aus und gibt diese als Integer-Liste zurück.
@@ -54,20 +53,20 @@ class Garden():
         """
         Prüft anhand mehrerer Kriterien, ob ein Anpflanzen möglich ist.
         """
-        #Betrachtetes Feld darf nicht besetzt sein
+        # Betrachtetes Feld darf nicht besetzt sein
         if not (fieldID in emptyFields): return False
         
-        #Anpflanzen darf nicht außerhalb des Gartens erfolgen
-        #Dabei reicht die Betrachtung in x-Richtung, da hier ein
-        #"Zeilenumbruch" stattfindet. Die y-Richtung ist durch die
-        #Abfrage abgedeckt, ob alle benötigten Felder frei sind.
-        #Felder außerhalb (in y-Richtung) des Gartens sind nicht leer,
-        #da sie nicht existieren.
+        # Anpflanzen darf nicht außerhalb des Gartens erfolgen
+        # Dabei reicht die Betrachtung in x-Richtung, da hier ein
+        # "Zeilenumbruch" stattfindet. Die y-Richtung ist durch die
+        # Abfrage abgedeckt, ob alle benötigten Felder frei sind.
+        # Felder außerhalb (in y-Richtung) des Gartens sind nicht leer,
+        # da sie nicht existieren.
         if not ((self._nMaxFields - fieldID)%self._lenX >= sx - 1): return False
         fieldsToPlantSet = set(fieldsToPlant)
         emptyFieldsSet = set(emptyFields)
         
-        #Alle benötigten Felder der Pflanze müssen leer sein
+        # Alle benötigten Felder der Pflanze müssen leer sein
         if not (fieldsToPlantSet.issubset(emptyFieldsSet)): return False
         return True
 
@@ -92,7 +91,8 @@ class Garden():
             self._logGarden.error('Garten ' + str(self._id) + ' konnte nicht bewässert werden.')
         else:
             self._logGarden.info('Im Garten ' + str(self._id) + ' wurden ' + str(nPlants) + ' Pflanzen gegossen.')
-            
+            print('Im Garten ' + str(self._id) + ' wurden ' + str(nPlants) + ' Pflanzen gegossen.')
+
     def getEmptyFields(self):
         """
         Gibt alle leeren Felder des Gartens zurück.
@@ -103,6 +103,17 @@ class Garden():
             self._logGarden.error('Konnte leere Felder von Garten ' + str(self._id) + ' nicht ermitteln.')
         else:
             return tmpEmptyFields
+
+    def getWeedFields(self):
+        """
+        Gibt alle Unkraut-Felder des Gartens zurück.
+        """
+        try:
+            tmpWeedFields = self._httpConn.getWeedFieldsOfGarden(self._id)
+        except:
+            self._logGarden.error('Konnte leere Felder von Garten ' + str(self._id) + ' nicht ermitteln.')
+        else:
+            return tmpWeedFields
 
     def harvest(self):
         """
@@ -115,28 +126,39 @@ class Garden():
         else:
             pass
 
-    def growPlant(self, plantID, sx, sy):
+    def growPlant(self, plantID, sx, sy, amount):
         """
         Pflanzt eine Pflanze beliebiger Größe an.
         """
-        #TODO: Soll nur so viele anpflanzen wie gewünscht (neuer Übergabeparameter)
-        #TODO: Soll nur so viele anfpflanzen wie verfügbar (Muss im Wurzelbot geprüft werden)
-        
+  
+        planted = 0
         emptyFields = self.getEmptyFields()
         
-        for field in range(1, self._nMaxFields + 1):
+        try:
+            for field in range(1, self._nMaxFields + 1):
+                if planted == amount: break
             
             fieldsToPlant = self._getAllFieldIDsFromFieldIDAndSizeAsIntList(field, sx, sy)
             
             if (self._isPlantGrowableOnField(field, emptyFields, fieldsToPlant, sx)):
                 fields = self._getAllFieldIDsFromFieldIDAndSizeAsString(field, sx, sy)
                 self._httpConn.growPlant(field, plantID, self._id, fields)
-                
+                planted += 1
+
                 #Nach dem Anbau belegte Felder aus der Liste der leeren Felder loeschen
                 fieldsToPlantSet = set(fieldsToPlant)
                 emptyFieldsSet = set(emptyFields)
                 tmpSet = emptyFieldsSet - fieldsToPlantSet
                 emptyFields = list(tmpSet)
+
+        except:
+            self._logGarden.error('Im Garten ' + str(self._id) + ' konnte nicht gepflanzt werden.')
+            return 0
+        else:
+            msg = 'Im Garten ' + str(self._id) + ' wurden ' + str(planted) + ' Pflanzen gepflanzt.'
+            self._logGarden.info(msg)
+            print(msg)
+            return planted
 
 
 class AquaGarden(Garden):

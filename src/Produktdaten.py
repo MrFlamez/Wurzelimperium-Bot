@@ -7,7 +7,7 @@ Created on 23.05.2019
 '''
  
 import json
-from Produkt import Product
+from src.Produkt import Product
 
 CATEGORY_DECORATION       = 'd'
 CATEGORY_HERBS            = 'h'
@@ -46,14 +46,10 @@ class ProductData():
         for product in self.__products:
             if int(id) == int(product.getID()): return product
             
-    def getProductByName(self, name):
-        try:
-            for product in self.__products:
-                if (name == product.getName()): return product
-        except:
-            pass #TODO: Exception-Fall definieren
-        else:
-            pass
+    def getProductByName(self, name : str):
+        for product in self.__products:
+            if (name.lower() == product.getName().lower()): return product
+        return None
         
     def getListOfAllProductIDs(self):
         
@@ -74,10 +70,12 @@ class ProductData():
         dictProducts = dict(jProducts)
         keys = dictProducts.keys()
         keys = sorted(keys)
-        #Nicht genutzte Attribute: img, imgPhase, fileext, clear, edge, pieces, speedup_cooldown in Kategorie z
+        # Nicht genutzte Attribute: img, imgPhase, fileext, clear, edge, pieces, speedup_cooldown in Kategorie z
         for key in keys:
-            if key != '999':
-                #999 ist nur ein Testeintrag und wird nicht benötigt.
+                # 999 ist nur ein Testeintrag und wird nicht benötigt.
+            if key == '999':
+                continue
+
                 name = dictProducts[key]['name'].replace('&nbsp;', ' ')
                 self.__products.append(Product(id        = int(key), \
                                                cat       = dictProducts[key]['category'], \
@@ -91,7 +89,15 @@ class ProductData():
                 
         self.__setAllPricesOfNPC()
     
-    
-    def test(self): #TODO: Kann entfernt werden am Ende
-        for product in self.__products:
+    def printAll(self):
+        sortedProducts = sorted(self.__products, key=lambda x:x.getName().lower())
+        for product in sortedProducts:
+            product.printAll()
+
+    def printAllPlants(self):
+        sortedProducts = sorted(self.__products, key=lambda x:x.getName().lower())
+        for product in sortedProducts:
+            if not product.isPlant():
+                continue
+
             product.printAll()

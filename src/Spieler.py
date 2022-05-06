@@ -43,11 +43,23 @@ class Spieler():
         return self.__eMailAdressConfirmed
     
     def getUserName(self):
-        return self.userName
+        return self.__userName
     
     def getLevelNr(self):
         return self.__userData['levelnr']
+
+    def getLevelName(self):
+        return self.__userData['level']
     
+    def getBar(self):
+        return self.__userData['bar']
+    
+    def getPoints(self):
+        return self.__userData['points']
+
+    def getCoins(self):
+        return self.__userData['coins']
+
     def setUserNameFromServer(self, http):
         """
         Liest den Spielernamen vom Server und speichert ihn in der Klasse.
@@ -66,10 +78,10 @@ class Spieler():
         try:
             tmpUserData = http.readUserDataFromServer()
         except:
-            print 'Status der E-Mail Adresse konnte nicht ermittelt werden.'
+            print('Status der E-Mail Adresse konnte nicht ermittelt werden.')
         else:
             self.__userData = tmpUserData
-            
+
     def setUserID(self, userID):
         self.__userID = userID
         
