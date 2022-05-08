@@ -1,8 +1,11 @@
 # Wurzelimperium-Bot
+
+[![Python 3](https://img.shields.io/badge/python-3-blue.svg)](https://www.python.org/)
+
 Ein Bot für das Browserspiel Wurzelimperium von Upjers. Mit ihm wird es den kostenlosen Spielern ermöglicht die Vorzüge eines Premiumaccounts zu nutzen.
 
 Hinweis:
-Der Bot kann derzeit nur über ein Python-Skript gesteuert werden. Ein GUI ist in Arbeit.
+Der Bot kann derzeit nur über ein Python-Skript gesteuert werden.
 
 Features:
 - Login ohne zusätzliche Verwendung eines Browsers
@@ -22,6 +25,6 @@ Geplante Features:
 
 # Installation
 
-Voraussetzung: Python 2.7
+Voraussetzung: Python 3 und siehe requirements.txt
 
 Klonen des Repositorys von GitHub. Wichtig ist dabei der src Ordner und die Datei example.py. Anschließend kann die example.py ausgeführt werden. In ihr können dann auch die Tätigkeiten des Bots definiert werden.
